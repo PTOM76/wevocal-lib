@@ -1,4 +1,5 @@
 import type { Clip } from './types'
+import { decodeAiff, isAiff } from './aiff'
 
 /** WAV ファイルなら RIFF/WAVE ヘッダからサンプルレートを読み取る */
 function wavSampleRate(buf: ArrayBuffer): number | null {
@@ -56,10 +57,10 @@ function findMp4aRate(v: DataView, b: Uint8Array, from: number, to: number): num
 }
 
 /**
- * 読み込める拡張子（ファイル選択ダイアログ用）。MP4・WebM は音声トラックだけを使う。
+ * 読み込める拡張子（ファイル選択ダイアログ用）。MP4・WebM は音声トラックだけを使う。AIFF は aiff.ts で読む。
  * audio/* などの MIME 型は OS が拡張子の一覧に展開し、ここの拡張子と重なって同じものが何度も出るので、拡張子だけを並べる
  */
-export const AUDIO_ACCEPT = '.wav,.mp3,.m4a,.mp4,.aac,.flac,.ogg,.oga,.opus,.webm'
+export const AUDIO_ACCEPT = '.wav,.aif,.aiff,.aifc,.mp3,.m4a,.mp4,.aac,.flac,.ogg,.oga,.opus,.webm'
 
 /**
  * 音声ファイルをブラウザ内でデコードする。WAV と MP4 はファイル自身の
@@ -89,6 +90,8 @@ export async function readFile(file: File, onProgress?: (p: number) => void): Pr
 export async function decodeFile(file: File, onProgress?: (p: number) => void): Promise<Clip> {
   const data = await readFile(file, onProgress)
   onProgress?.(-1)
+  // AIFF はブラウザが読めない（Safari 以外）ので自前で読む
+  if (isAiff(data)) return decodeAiff(data)
   const rate = Math.min(Math.max(wavSampleRate(data) ?? mp4SampleRate(data) ?? 48000, 8000), 384000)
   const ctx = new OfflineAudioContext(1, 1, rate)
   const audio = await ctx.decodeAudioData(data)
