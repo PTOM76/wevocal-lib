@@ -55,8 +55,11 @@ function findMp4aRate(v: DataView, b: Uint8Array, from: number, to: number): num
   return null
 }
 
-/** 読み込める拡張子・形式（ファイル選択ダイアログ用）。MP4 は音声トラックだけを使う */
-export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.mp4,video/mp4'
+/**
+ * 読み込める拡張子（ファイル選択ダイアログ用）。MP4・WebM は音声トラックだけを使う。
+ * audio/* などの MIME 型は OS が拡張子の一覧に展開し、ここの拡張子と重なって同じものが何度も出るので、拡張子だけを並べる
+ */
+export const AUDIO_ACCEPT = '.wav,.mp3,.m4a,.mp4,.aac,.flac,.ogg,.oga,.opus,.webm'
 
 /**
  * 音声ファイルをブラウザ内でデコードする。WAV と MP4 はファイル自身の
