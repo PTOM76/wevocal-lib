@@ -1,5 +1,5 @@
 # wevocal-lib
-WeVocalSynth と WeVocalExtractor で共有する信号処理の部品（Rust）。
+WeVocalSynthとWeVocalExtractorで共通利用する信号処理ライブラリ
 
 | モジュール | 内容 |
 | --- | --- |
@@ -9,6 +9,3 @@ WeVocalSynth と WeVocalExtractor で共有する信号処理の部品（Rust）
 ```sh
 cargo test --release
 ```
-
-## ライセンス
-MIT
