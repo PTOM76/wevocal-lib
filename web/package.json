@@ -1,0 +1,12 @@
+{
+  "name": "wevocal-lib",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WeVocalSynth と WeVocalExtractor で共通に使う、音声ファイルの読み込みと書き出し（WAV / MP3 / Opus）",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "peerDependencies": {
+    "@breezystack/lamejs": "^1.2.7"
+  }
+}
