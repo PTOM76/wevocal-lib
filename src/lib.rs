@@ -2,10 +2,10 @@
 //!
 //! - `fft`: radix-2 FFT
 //! - `resample`: 窓付き sinc 補間のリサンプル
-//!
-//! STFT / 逆STFT も今後ここに置く（いまは WeVocalExtractor 側に TypeScript 版がある）。
+//! - `stft`: STFT / 逆STFT（周期的な Hann 窓、center なし）
 
 pub mod fft;
 pub mod resample;
+pub mod stft;
 
 pub use resample::{resample, resample_with};
