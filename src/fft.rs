@@ -65,6 +65,8 @@ impl Fft {
             }
             half = 4;
         }
+        // 残りの段は radix-2。2 段ずつまとめる radix-4 も試したが、ネイティブで 2 倍ほど遅くなった（一度に使う値が多く、
+        // SIMD 命令に変換されなくなったとみられる。2026-10-02）
         while half < n {
             let size = half * 2;
             let (wc, ws) = (&self.cos[half..size], &self.sin[half..size]);

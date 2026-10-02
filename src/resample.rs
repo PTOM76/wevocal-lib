@@ -66,10 +66,23 @@ pub fn resample_with(
                 &table[p * taps..(p + 1) * taps],
                 &table[(p + 1) * taps..(p + 2) * taps],
             );
-            src.iter()
-                .zip(r0.iter().zip(r1))
-                .map(|(&v, (&a, &b))| v * (a + (b - a) * g))
-                .sum()
+            // 隣り合う 2 行のカーネルとの内積を求めてから補間する（係数を先に補間するのと同じ値）
+            let (d0, d1) = (dot(src, r0), dot(src, r1));
+            d0 + (d1 - d0) * g
         })
         .collect()
+}
+
+/// 内積。8 本の和に分けて足し、SIMD 命令に変換されやすくする（1 本の和に順に足すと、足す順番を変えられず変換されない）
+fn dot(a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = [0.0f32; 8];
+    let (ca, cb) = (a.chunks_exact(8), b.chunks_exact(8));
+    let (ra, rb) = (ca.remainder(), cb.remainder());
+    for (x, y) in ca.zip(cb) {
+        for i in 0..8 {
+            acc[i] += x[i] * y[i];
+        }
+    }
+    let tail: f32 = ra.iter().zip(rb).map(|(x, y)| x * y).sum();
+    acc.iter().sum::<f32>() + tail
 }
