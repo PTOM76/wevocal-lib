@@ -44,6 +44,27 @@ impl Fft {
         }
         let sign = if inverse { 1.0 } else { -1.0 };
         let mut half = 1;
+        // 最初の 2 段（2 点・4 点）は回転因子が 1 と ±i だけで、内側のループが 1〜2 回しか回らずループの手間のほうが大きい。
+        // 4 点ずつまとめて直接計算する（結果は下の一般の段と同じ）
+        if n >= 4 {
+            for s in (0..n).step_by(4) {
+                let (r, i) = (&mut re[s..s + 4], &mut im[s..s + 4]);
+                // 2 点の段
+                let (a0r, a0i, a1r, a1i) = (r[0] + r[1], i[0] + i[1], r[0] - r[1], i[0] - i[1]);
+                let (a2r, a2i, a3r, a3i) = (r[2] + r[3], i[2] + i[3], r[2] - r[3], i[2] - i[3]);
+                // 4 点の段: 後半の 2 つ目に掛ける回転因子は (0, sign)
+                let (tr, ti) = (-a3i * sign, a3r * sign);
+                r[0] = a0r + a2r;
+                i[0] = a0i + a2i;
+                r[2] = a0r - a2r;
+                i[2] = a0i - a2i;
+                r[1] = a1r + tr;
+                i[1] = a1i + ti;
+                r[3] = a1r - tr;
+                i[3] = a1i - ti;
+            }
+            half = 4;
+        }
         while half < n {
             let size = half * 2;
             let (wc, ws) = (&self.cos[half..size], &self.sin[half..size]);
