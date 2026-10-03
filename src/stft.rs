@@ -16,7 +16,7 @@ pub struct Stft {
 }
 
 impl Stft {
-    /// `n_fft` は 2 のべき乗
+    /// `n_fft` は 2 のべき乗か、2 のべき乗 × 小さな奇数（fft.rs）
     pub fn new(n_fft: usize, hop: usize) -> Self {
         let window = (0..n_fft)
             .map(|i| (0.5 - 0.5 * (2.0 * PI * i as f64 / n_fft as f64).cos()) as f32)
