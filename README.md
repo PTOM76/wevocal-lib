@@ -12,10 +12,11 @@ cargo test --release
 ```
 
 ## TypeScript（`web/`）
-音声ファイルの読み込みと書き出し。WeVocalSynth と WeVocalExtractor で共通に使う（ソースのまま読み込み、`wevocal-lib` を `web/src/index.ts` に向ける）。
+音声ファイルの読み込みと書き出し、再生の開始と停止。WeVocalSynth と WeVocalExtractor で共通に使う（ソースのまま読み込み、`wevocal-lib` を `web/src/index.ts` に向ける）。
 
 | ファイル | 内容 |
 | --- | --- |
 | `decode.ts` | 音声ファイルのデコード（WAV・MP4 は元のサンプルレートのまま） |
 | `wav.ts` | WAV の書き出し（16 / 24bit・32bit float） |
 | `export/` | 書き出し（WAV / MP3 / Opus）。範囲の切り出し・モノラル化・サンプルレートの変換も行う。MP3 は lamejs（LGPL-3.0、`peerDependencies`）を Worker で使い、Opus は WebCodecs で作る |
+| `playback.ts` | AudioContext の開始と停止。iOS では消音スイッチが入っていても鳴るように、オーディオセッションを playback にする。一時停止が終わる前に再生を始めて無音になるのも防ぐ |
