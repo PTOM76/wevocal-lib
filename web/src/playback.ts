@@ -1,4 +1,5 @@
 // AudioContext の再生の開始と停止（iOS の消音スイッチ、一時停止の待ち合わせへの対策）
+import { applyOutputDevice } from './outputDevice'
 
 /** AudioContext ごとの、終わっていない suspend（終わる前に再生を始めると、後から止まって無音になる） */
 const pendingSuspend = new WeakMap<AudioContext, Promise<void>>()
@@ -42,8 +43,11 @@ function setPlaybackSession() {
 export async function startContext(ctx: AudioContext, name: string) {
   setPlaybackSession()
   const first = ctx.state !== 'running' ? ctx.resume() : null
+  // 出力先は resume の後に合わせる（操作の直後に resume を呼ぶため）
+  const sink = applyOutputDevice(ctx)
   let error: string | null = null
   try {
+    await sink
     await pendingSuspend.get(ctx)
     await first
     if (ctx.state !== 'running') await ctx.resume()
