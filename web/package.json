@@ -3,10 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "WeVocalSynth と WeVocalExtractor で共通に使う、音声ファイルの読み込みと書き出し（WAV / MP3 / Opus）",
+  "description": "WeVocalSynth と WeVocalExtractor で共通に使う、音声ファイルの読み込みと書き出し（WAV / MP3 / Opus）、再生、波形の表示の土台",
   "license": "MIT",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react/index.ts"
+  },
   "peerDependencies": {
-    "@breezystack/lamejs": "^1.2.7"
+    "@breezystack/lamejs": "^1.2.7",
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }
