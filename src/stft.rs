@@ -4,7 +4,7 @@
 //! 逆変換は窓を掛けて足し込み、最後に呼び出し側が窓の2乗の和で割る（重みつき重ね合わせ）。
 
 use crate::fft::Fft;
-use std::f64::consts::PI;
+use crate::window::hann;
 
 pub struct Stft {
     n_fft: usize,
@@ -18,9 +18,7 @@ pub struct Stft {
 impl Stft {
     /// `n_fft` は 2 のべき乗か、2 のべき乗 × 小さな奇数（fft.rs）
     pub fn new(n_fft: usize, hop: usize) -> Self {
-        let window = (0..n_fft)
-            .map(|i| (0.5 - 0.5 * (2.0 * PI * i as f64 / n_fft as f64).cos()) as f32)
-            .collect();
+        let window = hann(n_fft);
         Stft {
             n_fft,
             hop,
