@@ -9,3 +9,4 @@ export { startContext, suspendContext, configurePlayback, type PlaybackOptions }
 export { canSelectOutput, setOutputDevice, listOutputDevices, revealDeviceLabels, type OutputDevice } from './outputDevice'
 export { canRecord, listInputDevices, openInput, startRecording, type InputDevice, type InputOptions, type Recording } from './record'
 export * from './waveform'
+export { WVSP_EXT, WVSP_VERSION, isWvspFile, readWvsp, writeWvsp, WvspError, type WvspHeader, type WvspTrack } from './wvsp'
