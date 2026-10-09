@@ -63,5 +63,6 @@ export function downloadBlob(blob: Blob, fileName: string) {
   a.href = url
   a.download = fileName
   a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  // すぐ消すと、大きなファイルの保存が途中で失敗するブラウザがある
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
