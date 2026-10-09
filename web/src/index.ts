@@ -11,3 +11,7 @@ export { canSelectOutput, setOutputDevice, listOutputDevices, revealDeviceLabels
 export { canRecord, listInputDevices, openInput, startRecording, type InputDevice, type InputOptions, type Recording } from './record'
 export * from './waveform'
 export { WVSP_EXT, WVSP_VERSION, isWvspFile, readWvsp, writeWvsp, WvspError, type WvspHeader, type WvspTrack } from './wvsp'
+// トラックのエフェクト（EQ、フェーダー）。WeVocalSynth の src/effects/ から移した
+export type { Effect, LiveEffect } from './effects/types'
+export * from './effects/eq'
+export * from './effects/fader'
