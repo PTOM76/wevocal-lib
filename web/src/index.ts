@@ -15,3 +15,4 @@ export { WVSP_EXT, WVSP_VERSION, isWvspFile, readWvsp, writeWvsp, WvspError, typ
 export type { Effect, LiveEffect } from './effects/types'
 export * from './effects/eq'
 export * from './effects/fader'
+export { DEFAULT_SILENCE, findSounds, type SilenceOptions } from './silence'
