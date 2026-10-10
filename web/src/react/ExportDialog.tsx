@@ -20,13 +20,8 @@ import { AAC_SAMPLE_RATES, BITRATES, MP3_SAMPLE_RATES, OPUS_SAMPLE_RATE, canEnco
 import { EXPORT_EXT, type ExportFormat } from '../export/exportAudio'
 import type { WavFormat } from '../wav'
 
-/** 書き出すときの仕上げ（書き出し、フォルダーへの保存などで共通。アプリが設定に覚える） */
-export interface FinishOptions {
-  /** 最大の音量を -1dB にそろえる */
-  normalize: boolean
-  /** 両端にかけるフェードの長さ（ミリ秒。0 ならかけない） */
-  fadeMs: number
-}
+import type { FinishOptions } from '../clipEdit'
+export type { FinishOptions }
 
 /** このダイアログが使う訳文のキー（アプリの訳文に同じキーを置く） */
 export type ExportDialogKey =
