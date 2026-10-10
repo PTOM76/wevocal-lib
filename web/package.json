@@ -11,10 +11,18 @@
   },
   "peerDependencies": {
     "@breezystack/lamejs": "^1.2.7",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "@mui/material": "^9.0.0",
+    "pevenmui": "*"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "@mui/material": {
+      "optional": true
+    },
+    "pevenmui": {
       "optional": true
     }
   }
