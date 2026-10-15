@@ -1,9 +1,9 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useState } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Switch, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Switch, Tooltip, Typography } from '@mui/material'
 import { ContextMenu, PresetMenu, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
-import { DEV_PLUGINS, STANDARD_PLUGINS, defaultValues, findPlugin, fxText, migrateValues, newSlot } from '../plugins/host'
+import { DEV_PLUGINS, STANDARD_PLUGINS, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
 import { EqPanel, type EqDialogKey } from './EqDialog'
 import FxParams from './FxParams'
@@ -12,7 +12,7 @@ import FxParams from './FxParams'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
+  | 'fx.applyHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
 
 type Values = Record<string, number>
 
@@ -30,6 +30,9 @@ export default function FxChainDialog(p: {
   dev?: boolean
   playing?: boolean
   onTogglePlay?: () => void
+  /** 列をトラックの音声に書き込む（書き込んだら列は空に戻る。元の音を書き換えないアプリでは渡さない） */
+  onApply?: () => void
+  busy?: boolean
   /** 利用者のプリセット（プラグインの id ごと）。保存はアプリが行う */
   userPresets?: Record<string, Preset<Values>[]>
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
@@ -138,6 +141,15 @@ export default function FxChainDialog(p: {
           <Button size="small" onClick={p.onTogglePlay} sx={{ mr: 'auto' }}>
             {p.playing ? t('eq.pause') : t('eq.play')}
           </Button>
+        )}
+        {p.onApply && (
+          <Tooltip title={t('fx.applyHelp')}>
+            <span>
+              <Button size="small" disabled={p.busy || isNeutralChain(p.slots)} onClick={p.onApply}>
+                {t('eq.apply')}
+              </Button>
+            </span>
+          </Tooltip>
         )}
         <Button size="small" onClick={p.onClose}>
           {t('common.close')}

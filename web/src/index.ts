@@ -21,6 +21,7 @@ export { toFrames, GAIN_RAMP_SEC, mapGain, gainRange, fadeRange, normalizeRange,
 export { setOutputLimit, limitedOutput } from './outputLimit'
 // WeVocal プラグイン（FX の列。型と基底クラスは plugin-sdk/）
 export * from './plugins'
+export { fxEffect, applyFx } from './plugins/fxEffect'
 export { FxBase, clampParam, SMOOTH } from '../../plugin-sdk'
 export { parseMidi, type MidiNote, type MidiTrack, type MidiFile } from './midi'
 export { NOTE_NAMES, hzToMidi, midiToHz, noteName, describePitch, median } from './notes'
