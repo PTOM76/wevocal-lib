@@ -127,6 +127,9 @@ export const reverbPlugin: FxPlugin = {
       'param.mix': 'Mix',
       'param.predelay': 'Pre-delay',
     },
+    ko_kr: { name: '리버브', 'param.type': '종류', 'type.room': '룸', 'type.hall': '홀', 'type.plate': '플레이트', 'param.size': '크기', 'param.damp': '고역 감쇠', 'param.mix': '믹스', 'param.predelay': '프리 딜레이' },
+    zh_cn: { name: '混响', 'param.type': '类型', 'type.room': '房间', 'type.hall': '大厅', 'type.plate': '板式', 'param.size': '大小', 'param.damp': '高频衰减', 'param.mix': '混合', 'param.predelay': '预延迟' },
+    zh_tw: { name: '殘響', 'param.type': '類型', 'type.room': '房間', 'type.hall': '大廳', 'type.plate': '板式', 'param.size': '大小', 'param.damp': '高頻衰減', 'param.mix': '混合', 'param.predelay': '預延遲' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Reverb(ctx, reverbManifest, host).init(values, on),
 }

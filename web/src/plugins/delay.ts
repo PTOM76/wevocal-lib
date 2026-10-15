@@ -96,6 +96,9 @@ export const delayPlugin: FxPlugin = {
       'param.tone': 'Tone',
       'param.mix': 'Mix',
     },
+    ko_kr: { name: '딜레이', 'param.sync': '템포 동기', 'sync.off': '끄기', 'sync.quarter': '1/4', 'sync.eighth': '1/8', 'sync.dotted': '점 1/8', 'sync.sixteenth': '1/16', 'param.time': '간격', 'param.feedback': '피드백', 'param.tone': '톤', 'param.mix': '믹스' },
+    zh_cn: { name: '延迟', 'param.sync': '速度同步', 'sync.off': '关闭', 'sync.quarter': '1/4', 'sync.eighth': '1/8', 'sync.dotted': '附点 1/8', 'sync.sixteenth': '1/16', 'param.time': '间隔', 'param.feedback': '反馈', 'param.tone': '音色', 'param.mix': '混合' },
+    zh_tw: { name: '延遲', 'param.sync': '速度同步', 'sync.off': '關閉', 'sync.quarter': '1/4', 'sync.eighth': '1/8', 'sync.dotted': '附點 1/8', 'sync.sixteenth': '1/16', 'param.time': '間隔', 'param.feedback': '回授', 'param.tone': '音色', 'param.mix': '混合' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Delay(ctx, delayManifest, host).init(values, on),
 }
