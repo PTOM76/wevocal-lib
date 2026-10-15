@@ -73,6 +73,8 @@ export interface HostInfo {
 /** 標準のプラグインの中身（今はノードを組む形） */
 export interface FxPlugin {
   manifest: PluginManifest
+  /** 値から余韻の秒を求める（manifest.tail の代わり。ディレイのフィードバックなど値で変わるもの） */
+  tail?: (values: Record<string, number>, bpm: number) => number
   /** 'ja_jp' → { key: 訳 } */
   lang: Record<string, Record<string, string>>
   create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean): FxInstance
