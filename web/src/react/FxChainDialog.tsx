@@ -1,7 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useState, useSyncExternalStore } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Switch, Tooltip, Typography } from '@mui/material'
-import { ContextMenu, PresetMenu, pevenFont, type Preset } from 'pevenmui'
+import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
+import { ContextMenu, PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
@@ -76,8 +76,8 @@ export default function FxChainDialog(p: {
   const presets = [...builtin, ...((plugin && p.userPresets?.[plugin.manifest.id]) || [])]
 
   return (
-    <Dialog open={p.open} onClose={p.onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ fontSize: pevenFont('xl'), py: 1.5 }}>{t('fx.title', { name: p.name })}</DialogTitle>
+    // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" width={900} height={640} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 280 }}>
           <Box sx={{ width: { xs: '100%', sm: 240 }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -163,6 +163,6 @@ export default function FxChainDialog(p: {
           {t('common.close')}
         </Button>
       </DialogActions>
-    </Dialog>
+    </WindowDialog>
   )
 }

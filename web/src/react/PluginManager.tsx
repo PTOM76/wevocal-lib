@@ -1,7 +1,7 @@
 // プラグインの導入と管理の画面（設定の「プラグイン」の中身。WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
 import { useState, useSyncExternalStore } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Typography } from '@mui/material'
-import { pevenFont } from 'pevenmui'
+import { Box, Button, DialogActions, DialogContent, IconButton, TextField, Typography } from '@mui/material'
+import { WindowDialog, pevenFont } from 'pevenmui'
 import { fetchPackage, fxText, installPackage, installedPlugins, PluginError, pluginsVersion, removePlugin, subscribePlugins, type PluginPackage } from '../plugins'
 
 /** この画面が使う訳文のキー（アプリの訳文に同じキーを置く） */
@@ -71,8 +71,8 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
           </IconButton>
         </Box>
       ))}
-      <Dialog open={!!pm} onClose={() => setPending(null)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontSize: pevenFont('xl'), py: 1.5 }}>{t('plugins.confirmTitle')}</DialogTitle>
+      {/* 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog） */}
+      <WindowDialog open={!!pm} onClose={() => setPending(null)} title={t('plugins.confirmTitle')} name="pluginConfirm" width={460} height={520} dialogProps={{ fullWidth: true, maxWidth: 'xs' }}>
         <DialogContent>
           {pm && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -99,7 +99,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
             {t('plugins.install')}
           </Button>
         </DialogActions>
-      </Dialog>
+      </WindowDialog>
     </Box>
   )
 }
