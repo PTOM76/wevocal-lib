@@ -14,3 +14,4 @@ export { PitchToolText, ToolDialog, VibratoDialog, SnapDialog, type PitchToolKey
 export { MidiDialog } from './MidiDialog'
 export { default as MarkerTempoDialog, type MarkerTempoKey } from './MarkerTempoDialog'
 export { default as EqDialog, type EqDialogKey } from './EqDialog'
+export { default as ThemedLevelMeter } from './ThemedLevelMeter'
