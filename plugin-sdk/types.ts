@@ -42,6 +42,14 @@ export interface PluginManifest {
   presets?: { name: string; values: Record<string, number> }[]
   /** 古い param id → 新しい id */
   migrate?: Record<string, string>
+  /** 求める権限（導入のとき利用者に見せる。例 'network'）。今は宣言だけで、強制はしない */
+  permissions?: string[]
+  /** AudioWorklet で動くモジュールの場所（マニフェストからの相対）。registerProcessor する名前は processorName(id) */
+  processor?: string
+  /** processor に渡す wasm の場所（任意。processorOptions.wasm で受け取る） */
+  wasm?: string
+  /** 訳文（ビルドの道具が lang/ の JSON をまとめて入れる。'ja_jp' → { key: 訳 }） */
+  lang?: Record<string, Record<string, string>>
 }
 
 /** 保存する形（トラックの fx の 1 項目） */
@@ -77,5 +85,10 @@ export interface FxPlugin {
   tail?: (values: Record<string, number>, bpm: number) => number
   /** 'ja_jp' → { key: 訳 } */
   lang: Record<string, Record<string, string>>
+  /** 使う前に済ませる非同期の準備（processor の読み込み）。書き出しの前に呼ぶ */
+  preload?: (ctx: BaseAudioContext) => Promise<void>
   create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean): FxInstance
 }
+
+/** processor が registerProcessor する名前（id から決める。例 'my.reverb' → 'wevocal-fx-my-reverb'） */
+export const processorName = (id: string) => `wevocal-fx-${id.replace(/[^a-zA-Z0-9]/g, '-')}`

@@ -1,4 +1,8 @@
 // WeVocal プラグインの窓口（ホストと標準のプラグイン）
 export type { FxInstance, FxPlugin, FxSlot, HostInfo, ParamDef, PluginManifest } from '../../../plugin-sdk'
-export { STANDARD_PLUGINS, DEV_PLUGINS, findPlugin, defaultValues, migrateValues, newSlot, isNeutralChain, fxText, chainTail, createFxChain, type FxChain } from './host'
+export { STANDARD_PLUGINS, DEV_PLUGINS, availablePlugins, preloadFx, findPlugin, defaultValues, migrateValues, newSlot, isNeutralChain, fxText, chainTail, createFxChain, type FxChain } from './host'
+export { installedPlugins, subscribePlugins, pluginsVersion } from './registry'
+export { fetchPackage, installPackage, removePlugin, loadInstalledPlugins } from './store'
+export { PluginError, validateManifest, type PluginErrorCode } from './validate'
+export type { PluginPackage } from './external'
 export { EQ_ID, eqPlugin, eqToSlot, slotToEq, eqToValues, valuesToEq } from './eq'

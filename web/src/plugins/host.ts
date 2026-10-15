@@ -4,6 +4,7 @@ import { delayPlugin } from './delay'
 import { eqPlugin } from './eq'
 import { limiterPlugin } from './limiter'
 import { reverbPlugin } from './reverb'
+import { installedPlugins, pluginsVersion } from './registry'
 import { templatePlugin } from '../../../plugin-sdk/template'
 import type { FxInstance, FxPlugin, FxSlot, HostInfo, PluginManifest } from '../../../plugin-sdk'
 
@@ -12,7 +13,16 @@ export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, compressorPlugin, delayPl
 /** 開発者向けの設定でだけ出すプラグイン（雛形） */
 export const DEV_PLUGINS: FxPlugin[] = [templatePlugin]
 
-export const findPlugin = (id: string): FxPlugin | undefined => [...STANDARD_PLUGINS, ...DEV_PLUGINS].find((p) => p.manifest.id === id)
+/** 追加の一覧に出すプラグイン（標準と、導入したもの） */
+export const availablePlugins = (): FxPlugin[] => [...STANDARD_PLUGINS, ...installedPlugins()]
+
+export const findPlugin = (id: string): FxPlugin | undefined => [...STANDARD_PLUGINS, ...DEV_PLUGINS, ...installedPlugins()].find((p) => p.manifest.id === id)
+
+/** 列の中の導入したプラグインの準備（processor の読み込み）を済ませる。書き出しの前と再生の前に待つ */
+export async function preloadFx(ctx: BaseAudioContext, ...lists: (FxSlot[] | undefined)[]): Promise<void> {
+  const ids = new Set(lists.flatMap((l) => (l ?? []).map((s) => s.plugin)))
+  await Promise.all([...ids].map((id) => findPlugin(id)?.preload?.(ctx)))
+}
 
 export const defaultValues = (m: PluginManifest): Record<string, number> => Object.fromEntries(m.params.map((p) => [p.id, p.default]))
 
@@ -29,7 +39,7 @@ export const newSlot = (p: FxPlugin): FxSlot => ({ plugin: p.manifest.id, versio
 export const isNeutralChain = (slots: FxSlot[] | undefined) => !slots?.some((s) => s.on)
 
 /** 訳文を引く。アプリの言語 → en_us → キーそのもの */
-export function fxText(p: FxPlugin, key: string, lang: string): string {
+export function fxText(p: Pick<FxPlugin, 'lang'>, key: string, lang: string): string {
   return p.lang[lang]?.[key] ?? p.lang.en_us?.[key] ?? key
 }
 
@@ -53,8 +63,8 @@ export interface FxChain {
   dispose(): void
 }
 
-/** 項目の並びの識別（プラグインの id の列） */
-const shape = (slots: FxSlot[]) => slots.map((s) => s.plugin).join('\n')
+/** 項目の並びの識別（プラグインの id の列と、導入したプラグインの版。導入や削除があれば作り直す） */
+const shape = (slots: FxSlot[]) => `${pluginsVersion()}|${slots.map((s) => s.plugin).join(',')}`
 
 export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: HostInfo): FxChain {
   const input = ctx.createGain()

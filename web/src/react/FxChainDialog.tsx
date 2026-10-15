@@ -1,18 +1,19 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Switch, Tooltip, Typography } from '@mui/material'
 import { ContextMenu, PresetMenu, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
-import { DEV_PLUGINS, STANDARD_PLUGINS, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
+import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
 import { EqPanel, type EqDialogKey } from './EqDialog'
+import { pluginsVersion, subscribePlugins } from '../plugins/registry'
 import FxParams from './FxParams'
 
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
 
 type Values = Record<string, number>
 
@@ -33,12 +34,16 @@ export default function FxChainDialog(p: {
   /** 列をトラックの音声に書き込む（書き込んだら列は空に戻る。元の音を書き換えないアプリでは渡さない） */
   onApply?: () => void
   busy?: boolean
+  /** 音を作る処理の負荷（0〜1。無ければ出さない） */
+  load?: number | null
   /** 利用者のプリセット（プラグインの id ごと）。保存はアプリが行う */
   userPresets?: Record<string, Preset<Values>[]>
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
   onClose: () => void
 }) {
   const t = p.t
+  // 導入したプラグインが増減したら描き直す
+  useSyncExternalStore(subscribePlugins, pluginsVersion)
   const [sel, setSel] = useState(0)
   const [addAt, setAddAt] = useState<{ x: number; y: number } | null>(null)
   const index = Math.min(sel, p.slots.length - 1)
@@ -65,7 +70,7 @@ export default function FxChainDialog(p: {
     e.stopPropagation()
     run()
   }
-  const plugins = [...STANDARD_PLUGINS, ...(p.dev ? DEV_PLUGINS : [])]
+  const plugins = [...availablePlugins(), ...(p.dev ? DEV_PLUGINS : [])]
 
   const builtin: Preset<Values>[] = (plugin?.manifest.presets ?? []).map((x) => ({ name: x.name, params: x.values }))
   const presets = [...builtin, ...((plugin && p.userPresets?.[plugin.manifest.id]) || [])]
@@ -137,6 +142,9 @@ export default function FxChainDialog(p: {
         </Box>
       </DialogContent>
       <DialogActions>
+        {p.load != null && (
+          <Typography sx={{ fontSize: pevenFont('sm'), color: p.load > 0.8 ? 'error.main' : 'text.secondary', mr: 'auto' }}>{t('fx.load', { n: Math.round(p.load * 100) })}</Typography>
+        )}
         {p.onTogglePlay && (
           <Button size="small" onClick={p.onTogglePlay} sx={{ mr: 'auto' }}>
             {p.playing ? t('eq.pause') : t('eq.play')}

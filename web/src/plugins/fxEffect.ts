@@ -2,7 +2,7 @@
 import type { Clip } from '../types'
 import type { Effect } from '../effects/types'
 import type { FxSlot, HostInfo } from '../../../plugin-sdk'
-import { createFxChain, isNeutralChain } from './host'
+import { createFxChain, isNeutralChain, preloadFx } from './host'
 
 /** 音声に FX の列を掛ける（余韻は足さず、長さは元のまま） */
 export async function applyFx(clip: Clip, slots: FxSlot[], host: HostInfo): Promise<Clip> {
@@ -13,6 +13,7 @@ export async function applyFx(clip: Clip, slots: FxSlot[], host: HostInfo): Prom
   for (const [i, ch] of clip.channels.entries()) buf.copyToChannel(ch as Float32Array<ArrayBuffer>, i)
   const src = ctx.createBufferSource()
   src.buffer = buf
+  await preloadFx(ctx, slots)
   const chain = createFxChain(ctx, slots, host)
   src.connect(chain.input)
   chain.output.connect(ctx.destination)
