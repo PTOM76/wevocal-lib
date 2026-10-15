@@ -4,10 +4,8 @@ import {
   Box,
   Button,
   Checkbox,
-  Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   MenuItem,
   Radio,
@@ -15,7 +13,7 @@ import {
   Select,
   Typography,
 } from '@mui/material'
-import { SliderRow, enterToSubmit, pevenFont } from 'pevenmui'
+import { SliderRow, WindowDialog, enterToSubmit, pevenFont } from 'pevenmui'
 import { rateForBpm, type SnapOptions, type VibratoOptions } from '../pitchTools'
 import { noteName } from '../notes'
 
@@ -63,18 +61,21 @@ const NOTES = Array.from({ length: 49 }, (_, i) => 36 + i)
 export function ToolDialog(p: { open: boolean; title: string; hasSelection: boolean; onClose: () => void; onRun: () => void; children: ReactNode }) {
   const t = useT()
   return (
-    <Dialog
+    // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
+    <WindowDialog
       open={p.open}
       onClose={p.onClose}
-      fullWidth
-      maxWidth="xs"
+      title={p.title}
+      name="pitchTool"
+      width={420}
+      height={460}
+      dialogProps={{ fullWidth: true, maxWidth: 'xs' }}
       onKeyDown={enterToSubmit(() => {
         p.onRun()
         p.onClose()
       })}
     >
-      <DialogTitle sx={{ fontSize: pevenFont('xl'), py: 1.5 }}>{p.title}</DialogTitle>
-      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Typography className="selectable" sx={{ fontSize: pevenFont('md'), color: 'text.secondary' }}>
           {t('pitchTool.target', { range: t(p.hasSelection ? 'common.selection' : 'common.whole') })}
         </Typography>
@@ -95,7 +96,7 @@ export function ToolDialog(p: { open: boolean; title: string; hasSelection: bool
           {t('common.cancel')}
         </Button>
       </DialogActions>
-    </Dialog>
+    </WindowDialog>
   )
 }
 

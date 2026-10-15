@@ -1,7 +1,7 @@
 // マーカーからのテンポを決めるダイアログ（WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
 import { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
-import { NumberInput, pevenFont } from 'pevenmui'
+import { Box, Button, DialogActions, DialogContent, Typography } from '@mui/material'
+import { NumberInput, WindowDialog, pevenFont } from 'pevenmui'
 
 /** テンポを持てるマーカー（名前と、ここからのテンポ） */
 type Marker = { id: string; name: string; tempo?: { bpm: number; beatsPerBar: number } }
@@ -38,8 +38,8 @@ export default function MarkerTempoDialog(p: {
   }
   const ok = () => bpm > 0 && done({ bpm, beatsPerBar: Math.max(1, Math.round(beatsPerBar)) })
   return (
-    <Dialog open={!!marker} onClose={p.onClose} fullWidth maxWidth="xs" onKeyDown={(e) => e.key === 'Enter' && ok()}>
-      <DialogTitle sx={{ fontSize: pevenFont('xl'), py: 1.5 }}>{t('markerTempo.title', { name: marker?.name ?? '' })}</DialogTitle>
+    // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
+    <WindowDialog open={!!marker} onClose={p.onClose} title={t('markerTempo.title', { name: marker?.name ?? '' })} name="markerTempo" width={360} height={280} dialogProps={{ fullWidth: true, maxWidth: 'xs' }} onKeyDown={(e) => e.key === 'Enter' && ok()}>
       <DialogContent>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', alignItems: 'center', justifyContent: 'start', columnGap: 2, rowGap: 1, mt: 1 }}>
           <Typography sx={{ fontSize: pevenFont('base') }}>BPM</Typography>
@@ -60,6 +60,6 @@ export default function MarkerTempoDialog(p: {
           OK
         </Button>
       </DialogActions>
-    </Dialog>
+    </WindowDialog>
   )
 }
