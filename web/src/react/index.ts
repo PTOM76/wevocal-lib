@@ -10,3 +10,5 @@ export { default as ExportDialog, Choice as LabeledSelect, type ExportSettings, 
 export { default as OutputDeviceRow, type OutputDeviceKey } from './OutputDeviceRow'
 export { default as SynthDialog, type SynthDialogKey } from './SynthDialog'
 export { default as SamplerDialog, type SamplerDialogKey, type SamplerOptions } from './SamplerDialog'
+export { PitchToolText, ToolDialog, VibratoDialog, SnapDialog, type PitchToolKey, type DialogProps } from './PitchToolDialogs'
+export { MidiDialog } from './MidiDialog'
