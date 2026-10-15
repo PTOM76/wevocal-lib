@@ -10,7 +10,7 @@ import type { Clip } from './types'
  */
 export const WVSP_EXT = '.wvsp'
 const MAGIC = 'WVSP'
-export const WVSP_VERSION = 3
+export const WVSP_VERSION = 4
 
 export const isWvspFile = (file: File) => file.name.toLowerCase().endsWith(WVSP_EXT)
 
@@ -101,7 +101,7 @@ export async function readWvsp<I extends { name: string } = { name: string }>(fi
   if (lead.byteLength < 8 || new TextDecoder().decode(lead.subarray(0, 4)) !== MAGIC) throw new WvspError('invalid')
   const jsonLen = new DataView(lead.buffer, lead.byteOffset, 8).getUint32(4, true)
   const raw = JSON.parse(new TextDecoder().decode(await source.slice(8, 8 + jsonLen).arrayBuffer())) as WvspHeader & { version: number; tracks?: I[]; clips: ClipInfo[] }
-  const infos: I[] | null = raw.version === 1 ? [{ name: raw.fileName } as I] : raw.version === 2 || raw.version === 3 ? (raw.tracks ?? []) : null
+  const infos: I[] | null = raw.version === 1 ? [{ name: raw.fileName } as I] : raw.version >= 2 && raw.version <= WVSP_VERSION ? (raw.tracks ?? []) : null
   if (!infos || raw.clips.length !== infos.length * 2 || infos.length === 0) throw new WvspError('unsupported')
 
   const total = raw.clips.reduce((s, c) => s + (c.same ? 0 : c.channels * c.length * 4), 0) || 1
