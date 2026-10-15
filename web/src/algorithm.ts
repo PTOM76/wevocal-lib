@@ -21,6 +21,7 @@ export const ALGORITHM_NAMES: Record<Algorithm, string> = {
   wsola: 'Legacy Wevia',
 }
 
+// TODO: hintはわけたい. eg: algorithm.sola2とalgorithm.sola2.hint、タイプもわけたほうがきれい
 /** 処理方式の名前と説明の訳文のキー（アプリの訳文に同じキーを置く） */
 export type AlgorithmKey =
   | 'algorithm.sola2'
