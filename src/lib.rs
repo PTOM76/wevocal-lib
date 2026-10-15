@@ -35,6 +35,7 @@ pub mod sola2;
 pub mod stft;
 pub mod tempo;
 mod timemap;
+pub mod voices;
 pub mod window;
 mod wsola;
 
