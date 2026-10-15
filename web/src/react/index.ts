@@ -13,3 +13,4 @@ export { default as SamplerDialog, type SamplerDialogKey, type SamplerOptions } 
 export { PitchToolText, ToolDialog, VibratoDialog, SnapDialog, type PitchToolKey, type DialogProps } from './PitchToolDialogs'
 export { MidiDialog } from './MidiDialog'
 export { default as MarkerTempoDialog, type MarkerTempoKey } from './MarkerTempoDialog'
+export { default as EqDialog, type EqDialogKey } from './EqDialog'
