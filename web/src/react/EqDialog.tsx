@@ -1,6 +1,6 @@
 // トラックのグラフィック EQ の画面（EqPanel）とダイアログ（WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Switch, ToggleButton, Tooltip, ToggleButtonGroup, Typography } from '@mui/material'
-import { pevenFont, usePalette } from 'pevenmui'
+import { Box, Button, DialogActions, DialogContent, FormControlLabel, Switch, ToggleButton, Tooltip, ToggleButtonGroup, Typography } from '@mui/material'
+import { WindowDialog, pevenFont, usePalette } from 'pevenmui'
 import { eqRange, flatEq, isFlatEq, resizeEq, setEqRange, type EqBands, type EqRange, type TrackEq } from '../effects/eq'
 import EqGraph from './EqGraph'
 
@@ -70,8 +70,8 @@ export default function EqDialog(p: {
   const t = p.t
   const eq = p.eq
   return (
-    <Dialog open={p.open} onClose={p.onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ fontSize: pevenFont('xl'), py: 1.5 }}>{t('eq.title', { name: p.trackName })}</DialogTitle>
+    // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('eq.title', { name: p.trackName })} name="eq" width={780} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent>
         <EqPanel t={t} eq={eq} onChange={p.onChange} />
       </DialogContent>
@@ -92,6 +92,6 @@ export default function EqDialog(p: {
           {t('common.close')}
         </Button>
       </DialogActions>
-    </Dialog>
+    </WindowDialog>
   )
 }
