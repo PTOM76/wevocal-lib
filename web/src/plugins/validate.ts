@@ -57,6 +57,7 @@ export function validateManifest(raw: unknown): PluginManifest {
     ...(m.latency ? { latency: num(m.latency, 0) } : {}),
     ...(m.tail ? { tail: Math.max(0, num(m.tail, 0)) } : {}),
     ...(Array.isArray(m.permissions) ? { permissions: m.permissions.map(String) } : {}),
+    ...(m.sidechain ? { sidechain: true } : {}),
     ...(m.processor ? { processor: str(m.processor) } : {}),
     ...(m.wasm ? { wasm: str(m.wasm) } : {}),
     ...(m.migrate ? { migrate: m.migrate } : {}),

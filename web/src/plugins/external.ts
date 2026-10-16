@@ -74,6 +74,9 @@ function loadModule(ctx: BaseAudioContext, pkg: PluginPackage): Promise<boolean>
 }
 
 class WorkletFx extends FxBase {
+  /** 二つ目の入力（サイドチェーン）。processor の 2 番目の入力につなぐ */
+  sidechainIn?: GainNode
+  private state?: string
   private node: AudioWorkletNode | null = null
   private disposed = false
   private latest: Record<string, number> = {}
@@ -83,9 +86,11 @@ class WorkletFx extends FxBase {
 
   private readonly pkg: PluginPackage
 
-  constructor(ctx: BaseAudioContext, pkg: PluginPackage, host: HostInfo) {
+  constructor(ctx: BaseAudioContext, pkg: PluginPackage, host: HostInfo, state?: string) {
     super(ctx, pkg.manifest, host)
     this.pkg = pkg
+    this.state = state
+    if (pkg.manifest.sidechain) this.sidechainIn = this.track(ctx.createGain())
   }
 
   protected build() {
@@ -106,16 +111,26 @@ class WorkletFx extends FxBase {
 
   private attach() {
     const node = new AudioWorkletNode(this.ctx, processorName(this.pkg.manifest.id), {
-      numberOfInputs: 1,
+      numberOfInputs: this.sidechainIn ? 2 : 1,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { wasm: this.pkg.wasm, sampleRate: this.ctx.sampleRate },
+      processorOptions: { wasm: this.pkg.wasm, sampleRate: this.ctx.sampleRate, state: this.state },
     })
     this.node = node
-    // 再生中の AudioContext だけ負荷を見る（書き出しは速く進むので、時間の割合に意味がない）
-    if (this.ctx instanceof AudioContext) node.port.onmessage = (e) => this.onLoad(e.data?.__wevocalLoad)
+    if (this.sidechainIn) this.sidechainIn.connect(node, 0, 1)
+    node.port.onmessage = (e) => {
+      // 処理時間の報告は再生中の AudioContext だけ見る（書き出しは速く進むので、時間の割合に意味がない）
+      if (this.ctx instanceof AudioContext) this.onLoad(e.data?.__wevocalLoad)
+      if (typeof e.data?.__wevocalState === 'string') this.host.onState?.(e.data.__wevocalState)
+    }
     this.src.connect(node).connect(this.dst)
     this.apply(this.latest, this.ctx.currentTime)
+  }
+
+  setState(state: string | undefined) {
+    if (state === this.state) return
+    this.state = state
+    this.node?.port.postMessage({ __wevocalSetState: state })
   }
 
   private onLoad(ratio: unknown) {
@@ -159,6 +174,6 @@ export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
     manifest: pkg.manifest,
     lang: pkg.manifest.lang ?? {},
     preload: async (ctx) => void (await loadModule(ctx, pkg)),
-    create: (ctx, values, host, on = true) => new WorkletFx(ctx, pkg, host).init(values, on),
+    create: (ctx, values, host, on = true, state) => new WorkletFx(ctx, pkg, host, state).init(values, on),
   }
 }

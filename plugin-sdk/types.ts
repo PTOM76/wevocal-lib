@@ -42,6 +42,8 @@ export interface PluginManifest {
   presets?: { name: string; values: Record<string, number> }[]
   /** 古い param id → 新しい id */
   migrate?: Record<string, string>
+  /** 二つ目の入力（サイドチェーン）を持つか。持つと、FX の列の項目で音を取る先のトラックを選べる */
+  sidechain?: boolean
   /** 求める権限（導入のとき利用者に見せる。例 'network'）。今は宣言だけで、強制はしない */
   permissions?: string[]
   /** AudioWorklet で動くモジュールの場所（マニフェストからの相対）。registerProcessor する名前は processorName(id) */
@@ -59,15 +61,21 @@ export interface FxSlot {
   version: string
   on: boolean
   values: Record<string, number>
-  /** つまみ以外の状態（base64）。今は使わない */
+  /** つまみ以外の状態（base64）。processor が port で知らせたものを保存し、次に作るときに渡す */
   state?: string
+  /** サイドチェーンで音を取るトラックの id（plugin が sidechain を持つとき。無ければ自分の入力で検出する） */
+  sidechain?: string
 }
 
 /** 実行中のプラグイン（wevocal-lib の LiveEffect と同じ形） */
 export interface FxInstance {
   input: AudioNode
   output: AudioNode
+  /** 二つ目の入力（サイドチェーン）。持つプラグインだけ */
+  sidechainIn?: AudioNode
   update(values: Record<string, number>): void
+  /** 保存してあった状態を渡す（作ったあとに状態が変わったときのみ） */
+  setState?(state: string | undefined): void
   /** オフは素通し（ノードは残す） */
   setOn(on: boolean): void
   dispose(): void
@@ -76,6 +84,8 @@ export interface FxInstance {
 export interface HostInfo {
   /** 今のテンポ（BPM）。ディレイの同期に使う */
   bpm: () => number
+  /** プラグインが状態（つまみ以外）を保存したいときに呼ぶ。ホストが FX の項目の state に入れる */
+  onState?: (state: string) => void
 }
 
 /** 標準のプラグインの中身（今はノードを組む形） */
@@ -87,7 +97,7 @@ export interface FxPlugin {
   lang: Record<string, Record<string, string>>
   /** 使う前に済ませる非同期の準備（processor の読み込み）。書き出しの前に呼ぶ */
   preload?: (ctx: BaseAudioContext) => Promise<void>
-  create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean): FxInstance
+  create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean, state?: string): FxInstance
 }
 
 /** processor が registerProcessor する名前（id から決める。例 'my.reverb' → 'wevocal-fx-my-reverb'） */

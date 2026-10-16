@@ -9,12 +9,13 @@ import { eqPlugin } from './eq'
 import { gatePlugin } from './gate'
 import { limiterPlugin } from './limiter'
 import { reverbPlugin } from './reverb'
+import { sidechainPlugin } from './sidechain'
 import { installedPlugins, pluginsVersion } from './registry'
 import { templatePlugin } from '../../../plugin-sdk/template'
 import type { FxInstance, FxPlugin, FxSlot, HostInfo, PluginManifest } from '../../../plugin-sdk'
 
 /** アプリに同梱する標準のプラグイン（段階が進むと増える） */
-export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, gatePlugin, compressorPlugin, deesserPlugin, filterPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
+export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, gatePlugin, compressorPlugin, sidechainPlugin, deesserPlugin, filterPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
 /** 開発者向けの設定でだけ出すプラグイン（雛形） */
 export const DEV_PLUGINS: FxPlugin[] = [templatePlugin]
 
@@ -80,21 +81,47 @@ export interface FxChain {
 /** 項目の並びの識別（プラグインの id の列と、導入したプラグインの版。導入や削除があれば作り直す） */
 const shape = (slots: FxSlot[]) => `${pluginsVersion()}|${slots.map((s) => s.plugin).join(',')}`
 
-export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: HostInfo): FxChain {
+/** 列の外とのやり取り */
+export interface ChainOptions {
+  /** プラグインが状態を保存したいとき（何番目の項目か、base64） */
+  onState?: (index: number, state: string) => void
+  /** サイドチェーンで音を取るトラックの音（無ければ null） */
+  sidechain?: (source: string) => AudioNode | null
+}
+
+export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: HostInfo, opts: ChainOptions = {}): FxChain {
   const input = ctx.createGain()
   const output = ctx.createGain()
   let current: (FxInstance | null)[] = []
   let key = ''
+  /** サイドチェーンにつないだ音（項目ごと。つなぎ直すときに外す） */
+  let scTaps: ({ from: AudioNode; to: AudioNode } | null)[] = []
+  let scSources: (string | undefined)[] = []
+
+  const connectSidechain = (i: number, source: string | undefined) => {
+    scTaps[i] && scTaps[i]!.from.disconnect(scTaps[i]!.to)
+    scTaps[i] = null
+    scSources[i] = source
+    const to = current[i]?.sidechainIn
+    const from = source && to ? opts.sidechain?.(source) : null
+    if (from && to) {
+      from.connect(to)
+      scTaps[i] = { from, to }
+    }
+  }
 
   const build = (list: FxSlot[]) => {
     input.disconnect()
     // 見つからないプラグイン（入っていない）は素通し。値は slots に残る
-    current = list.map((s) => {
+    current = list.map((s, i) => {
       const pl = findPlugin(s.plugin)
       // 書き出し専用（realtime: false）は、再生中は通さず素通しにする。書き出し（OfflineAudioContext）では掛ける
       if (pl?.manifest.realtime === false && ctx instanceof AudioContext) return null
-      return pl?.create(ctx, migrateValues(pl.manifest, s.values), host, s.on) ?? null
+      return pl?.create(ctx, migrateValues(pl.manifest, s.values), { ...host, onState: (st) => opts.onState?.(i, st) }, s.on, s.state) ?? null
     })
+    scTaps = []
+    scSources = []
+    for (const [i, s] of list.entries()) connectSidechain(i, s.sidechain)
     let last: AudioNode = input
     for (const n of current) {
       if (!n) continue
@@ -105,6 +132,8 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
     key = shape(list)
   }
   const free = () => {
+    for (const t of scTaps) t && t.from.disconnect(t.to)
+    scTaps = []
     for (const n of current) n?.dispose()
     current = []
   }
@@ -123,6 +152,9 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
         if (!n) continue
         n.update(migrateValues(findPlugin(list[i].plugin)!.manifest, list[i].values))
         n.setOn(list[i].on)
+        n.setState?.(list[i].state)
+        // 音を取る先が変わったとき、まだ存在しなかったトラックが増えたときにつなぎ直す
+        if (list[i].sidechain !== scSources[i] || (list[i].sidechain && !scTaps[i])) connectSidechain(i, list[i].sidechain)
       }
     },
     dispose() {

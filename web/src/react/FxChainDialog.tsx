@@ -9,13 +9,14 @@ import { presetsFromJson, presetsToJson } from '../plugins/presets'
 import { downloadBlob } from '../wav'
 import { EqPanel, type EqDialogKey } from './EqDialog'
 import { isOverloaded, loadOf, loadVersion, pluginsVersion, subscribeLoad, subscribePlugins } from '../plugins/registry'
+import { Choice } from './ExportDialog'
 import FxParams from './FxParams'
 
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
 
 type Values = Record<string, number>
 
@@ -38,6 +39,8 @@ export default function FxChainDialog(p: {
   busy?: boolean
   /** 音を作る処理の負荷（0〜1。無ければ出さない） */
   load?: number | null
+  /** サイドチェーンで音を取れるトラック（無ければ選ぶ欄を出さない） */
+  sidechainSources?: { id: string; name: string }[]
   /** 利用者のプリセット（プラグインの id ごと）。保存はアプリが行う */
   userPresets?: Record<string, Preset<Values>[]>
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
@@ -179,6 +182,16 @@ export default function FxChainDialog(p: {
                   />
                   {importError && <Typography sx={{ fontSize: pevenFont('sm'), color: 'error.main' }}>{t('fx.presetImportError')}</Typography>}
                 </Box>
+                {plugin.manifest.sidechain && p.sidechainSources && (
+                  <Box sx={{ mb: 1 }}>
+                    <Choice
+                      label={t('fx.sidechainSource')}
+                      value={slot.sidechain ?? ''}
+                      options={[['', t('fx.sidechainSelf')], ...p.sidechainSources.map((x): [string, string] => [x.id, x.name])]}
+                      onChange={(v) => patch(index, { sidechain: v || undefined })}
+                    />
+                  </Box>
+                )}
                 <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
               </>
             )}
