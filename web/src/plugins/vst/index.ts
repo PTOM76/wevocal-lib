@@ -66,6 +66,18 @@ class VstProcessor extends AudioWorkletProcessor {
     const chans = []
     for (let c = 0; c < this.vst.numInputs; c++) chans.push(inp[c] ?? inp[0] ?? new Float32Array(n))
     const res = this.vst.process(chans, n)
+    // 出力に NaN や inf が混ざったら、そのブロックは 0 にして、以後は素通しにする（暴走したプラグインが音を壊し続けないように）
+    let bad = false
+    for (let c = 0; c < out.length && !bad; c++) {
+      const r = res[c] ?? res[0]
+      for (let i = 0; i < r.length; i++) if (!Number.isFinite(r[i])) { bad = true; break }
+    }
+    if (bad) {
+      this.failed = true
+      this.port.postMessage({ __wevocalError: 'non-finite output' })
+      for (let c = 0; c < out.length; c++) out[c].fill(0)
+      return true
+    }
     for (let c = 0; c < out.length; c++) out[c].set(res[c] ?? res[0])
     return true
   }
