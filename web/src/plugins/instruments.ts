@@ -282,6 +282,7 @@ export const STANDARD_INSTRUMENTS: InstrumentPlugin[] = [
 /** 導入した音源（store.ts が入れる） */
 let installed: InstrumentPlugin[] = []
 export const setInstalledInstruments = (list: InstrumentPlugin[]) => void (installed = list)
+export const installedInstruments = () => installed
 
 export const availableInstruments = () => [...STANDARD_INSTRUMENTS, ...installed]
 export const findInstrument = (id: string) => availableInstruments().find((p) => p.manifest.id === id)

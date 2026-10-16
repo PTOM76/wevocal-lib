@@ -3,7 +3,7 @@ export type { AutoPoint, FxInstance, FxPlugin, FxSlot, HostInfo, ParamDef, Plugi
 export { STANDARD_PLUGINS, DEV_PLUGINS, availablePlugins, preloadFx, findPlugin, defaultValues, migrateValues, newSlot, missingPlugins, isNeutralChain, fxText, chainTail, chainLatency, createFxChain, type FxChain, type ChainOptions } from './host'
 export { installedPlugins, subscribePlugins, pluginsVersion, loadOf, isOverloaded } from './registry'
 export { fetchPackage, installPackage, removePlugin, updatePlugin, pluginSource, setPluginStore, loadInstalledPlugins, whenPluginsLoaded, type PluginStore } from './store'
-export { STANDARD_INSTRUMENTS, availableInstruments, findInstrument, preloadInstruments, createInstrument, type InstrumentPlugin, type InstrumentInstance, type NoteEvent, type SampleData } from './instruments'
+export { STANDARD_INSTRUMENTS, installedInstruments, availableInstruments, findInstrument, preloadInstruments, createInstrument, type InstrumentPlugin, type InstrumentInstance, type NoteEvent, type SampleData } from './instruments'
 export { presetsToJson, presetsFromJson, type PresetItem } from './presets'
 export { autoValueAt, automatedSlots, hasAutomation, paramToFrac, fracToParam } from './automation'
 export { startRenderLoad } from './renderLoad'
