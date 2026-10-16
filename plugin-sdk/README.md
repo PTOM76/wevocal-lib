@@ -59,6 +59,17 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 - サイドチェーンを持つ processor は、`inputs[1]` を読む（何もつながっていなければ空）。`numberOfInputs` はホストが 2 にする
 - つまみ以外の状態は、`this.port.postMessage({ __wevocalState: '文字列' })` で知らせる。ホストがプロジェクトに保存し、次に作るときに `options.processorOptions.state` で渡し、ほかの場所で変わったときは `port.onmessage` の `{ __wevocalSetState: 文字列 }` で知らせる（文字列は base64 などにする）
 
+## 音源のプラグイン
+
+`kind` を `instrument` にすると、MIDI の音符を鳴らす音源になる（トラックの「音源…」で選ぶ）。processor は入力を持たず（`numberOfInputs` は 0）、音を出力する。つまみは FX と同じく `params`。音符は port で届く:
+
+- `{ __wevocalNotes: [{ time, dur, pitch, vel }] }`: 時刻（AudioContext の秒）に鳴らし、`dur` 秒後に離す音符。先に送られるので、時刻になったサンプルで始める（`currentTime` と `sampleRate` から求める）
+- `{ __wevocalNoteOn: { pitch, vel } }`、`{ __wevocalNoteOff: { pitch } }`: すぐ鳴らす、離す（キーボード）
+- `{ __wevocalClear: true }`: 音符をすべて取り消し、鳴っている音を離す
+- `{ __wevocalSample: { channels, sampleRate } }`: 音色にする元の音（マニフェストの params に `sample` がある音源へ、サンプラー型）
+
+書き出しのときは、音符が `processorOptions.events` で全部渡される。標準のシンセとサンプラーの processor（`web/src/plugins/instruments.ts`）が見本になる。
+
 ## 独自の画面
 
 マニフェストの `ui` に HTML を指定すると、FX のダイアログのつまみの代わりにその画面を出す。画面は iframe の sandbox（スクリプトだけ許可。アプリの中には触れない）の中で動き、`postMessage` でやり取りする。
