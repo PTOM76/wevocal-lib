@@ -70,11 +70,11 @@ class Distortion extends FxBase {
 export const distortionPlugin: FxPlugin = {
   manifest: distortionManifest,
   lang: {
-    ja_jp: { name: 'ディストーション', 'param.drive': 'ドライブ', 'param.shape': '種類', 'shape.soft': 'ソフト', 'shape.hard': 'ハード', 'shape.fold': 'フォールド', 'param.tone': '音色', 'param.level': '出力', 'param.mix': 'ミックス' },
-    en_us: { name: 'Distortion', 'param.drive': 'Drive', 'param.shape': 'Shape', 'shape.soft': 'Soft', 'shape.hard': 'Hard', 'shape.fold': 'Fold', 'param.tone': 'Tone', 'param.level': 'Level', 'param.mix': 'Mix' },
-    ko_kr: { name: '디스토션', 'param.drive': '드라이브', 'param.shape': '종류', 'shape.soft': '소프트', 'shape.hard': '하드', 'shape.fold': '폴드', 'param.tone': '톤', 'param.level': '출력', 'param.mix': '믹스' },
-    zh_cn: { name: '失真', 'param.drive': '驱动', 'param.shape': '类型', 'shape.soft': '柔和', 'shape.hard': '硬', 'shape.fold': '折叠', 'param.tone': '音色', 'param.level': '输出', 'param.mix': '混合' },
-    zh_tw: { name: '失真', 'param.drive': '驅動', 'param.shape': '類型', 'shape.soft': '柔和', 'shape.hard': '硬', 'shape.fold': '摺疊', 'param.tone': '音色', 'param.level': '輸出', 'param.mix': '混合' },
+    ja_jp: { name: 'WevDistortion', description: '音を歪ませて、太さや荒さを足します', keywords: 'ディストーション 歪み', 'param.drive': 'ドライブ', 'param.shape': '種類', 'shape.soft': 'ソフト', 'shape.hard': 'ハード', 'shape.fold': 'フォールド', 'param.tone': '音色', 'param.level': '出力', 'param.mix': 'ミックス' },
+    en_us: { name: 'WevDistortion', description: 'Adds thickness or grit by distorting the sound.', 'param.drive': 'Drive', 'param.shape': 'Shape', 'shape.soft': 'Soft', 'shape.hard': 'Hard', 'shape.fold': 'Fold', 'param.tone': 'Tone', 'param.level': 'Level', 'param.mix': 'Mix' },
+    ko_kr: { name: 'WevDistortion', keywords: '디스토션', 'param.drive': '드라이브', 'param.shape': '종류', 'shape.soft': '소프트', 'shape.hard': '하드', 'shape.fold': '폴드', 'param.tone': '톤', 'param.level': '출력', 'param.mix': '믹스' },
+    zh_cn: { name: 'WevDistortion', keywords: '失真', 'param.drive': '驱动', 'param.shape': '类型', 'shape.soft': '柔和', 'shape.hard': '硬', 'shape.fold': '折叠', 'param.tone': '音色', 'param.level': '输出', 'param.mix': '混合' },
+    zh_tw: { name: 'WevDistortion', keywords: '失真', 'param.drive': '驅動', 'param.shape': '類型', 'shape.soft': '柔和', 'shape.hard': '硬', 'shape.fold': '摺疊', 'param.tone': '音色', 'param.level': '輸出', 'param.mix': '混合' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Distortion(ctx, distortionManifest, host).init(values, on),
 }

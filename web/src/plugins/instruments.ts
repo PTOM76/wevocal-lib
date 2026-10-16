@@ -246,11 +246,11 @@ const synthManifest = base(
     { id: 'volume', name: 'param.volume', min: -48, max: 6, default: -10, step: 0.5, unit: 'dB' },
   ],
   {
-    ja_jp: { name: 'シンセ', 'param.wave': '波形', 'wave.sine': 'サイン', 'wave.saw': 'ノコギリ', 'wave.square': '矩形', 'wave.triangle': '三角', 'param.attack': 'アタック', 'param.decay': 'ディケイ', 'param.sustain': 'サステイン', 'param.release': 'リリース', 'param.cutoff': 'カットオフ', 'param.detune': 'デチューン（セント）', 'param.volume': '音量' },
-    en_us: { name: 'Synth', 'param.wave': 'Wave', 'wave.sine': 'Sine', 'wave.saw': 'Saw', 'wave.square': 'Square', 'wave.triangle': 'Triangle', 'param.attack': 'Attack', 'param.decay': 'Decay', 'param.sustain': 'Sustain', 'param.release': 'Release', 'param.cutoff': 'Cutoff', 'param.detune': 'Detune (cents)', 'param.volume': 'Volume' },
-    ko_kr: { name: '신스', 'param.wave': '파형', 'wave.sine': '사인', 'wave.saw': '톱니', 'wave.square': '사각', 'wave.triangle': '삼각', 'param.attack': '어택', 'param.decay': '디케이', 'param.sustain': '서스테인', 'param.release': '릴리스', 'param.cutoff': '컷오프', 'param.detune': '디튠 (센트)', 'param.volume': '음량' },
-    zh_cn: { name: '合成器', 'param.wave': '波形', 'wave.sine': '正弦', 'wave.saw': '锯齿', 'wave.square': '方波', 'wave.triangle': '三角', 'param.attack': '起音', 'param.decay': '衰减', 'param.sustain': '持续', 'param.release': '释放', 'param.cutoff': '截止', 'param.detune': '失谐（音分）', 'param.volume': '音量' },
-    zh_tw: { name: '合成器', 'param.wave': '波形', 'wave.sine': '正弦', 'wave.saw': '鋸齒', 'wave.square': '方波', 'wave.triangle': '三角', 'param.attack': '起音', 'param.decay': '衰減', 'param.sustain': '持續', 'param.release': '釋放', 'param.cutoff': '截止', 'param.detune': '失諧（音分）', 'param.volume': '音量' },
+    ja_jp: { name: 'WevSynth', description: '波形から音を作る、基本のシンセサイザー', keywords: 'シンセ シンセサイザー', 'param.wave': '波形', 'wave.sine': 'サイン', 'wave.saw': 'ノコギリ', 'wave.square': '矩形', 'wave.triangle': '三角', 'param.attack': 'アタック', 'param.decay': 'ディケイ', 'param.sustain': 'サステイン', 'param.release': 'リリース', 'param.cutoff': 'カットオフ', 'param.detune': 'デチューン（セント）', 'param.volume': '音量' },
+    en_us: { name: 'WevSynth', description: 'A basic synthesizer that builds sound from waveforms.', 'param.wave': 'Wave', 'wave.sine': 'Sine', 'wave.saw': 'Saw', 'wave.square': 'Square', 'wave.triangle': 'Triangle', 'param.attack': 'Attack', 'param.decay': 'Decay', 'param.sustain': 'Sustain', 'param.release': 'Release', 'param.cutoff': 'Cutoff', 'param.detune': 'Detune (cents)', 'param.volume': 'Volume' },
+    ko_kr: { name: 'WevSynth', keywords: '신스', 'param.wave': '파형', 'wave.sine': '사인', 'wave.saw': '톱니', 'wave.square': '사각', 'wave.triangle': '삼각', 'param.attack': '어택', 'param.decay': '디케이', 'param.sustain': '서스테인', 'param.release': '릴리스', 'param.cutoff': '컷오프', 'param.detune': '디튠 (센트)', 'param.volume': '음량' },
+    zh_cn: { name: 'WevSynth', keywords: '合成器', 'param.wave': '波形', 'wave.sine': '正弦', 'wave.saw': '锯齿', 'wave.square': '方波', 'wave.triangle': '三角', 'param.attack': '起音', 'param.decay': '衰减', 'param.sustain': '持续', 'param.release': '释放', 'param.cutoff': '截止', 'param.detune': '失谐（音分）', 'param.volume': '音量' },
+    zh_tw: { name: 'WevSynth', keywords: '合成器', 'param.wave': '波形', 'wave.sine': '正弦', 'wave.saw': '鋸齒', 'wave.square': '方波', 'wave.triangle': '三角', 'param.attack': '起音', 'param.decay': '衰減', 'param.sustain': '持續', 'param.release': '釋放', 'param.cutoff': '截止', 'param.detune': '失諧（音分）', 'param.volume': '音量' },
   },
 )
 
@@ -265,11 +265,11 @@ const samplerManifest = base(
     { id: 'volume', name: 'param.volume', min: -48, max: 12, default: 0, step: 0.5, unit: 'dB' },
   ],
   {
-    ja_jp: { name: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'loop.off': 'しない', 'loop.on': 'する', 'param.volume': '音量' },
-    en_us: { name: 'Sampler', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'loop.off': 'Off', 'loop.on': 'On', 'param.volume': 'Volume' },
-    ko_kr: { name: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'loop.off': '끄기', 'loop.on': '켜기', 'param.volume': '음량' },
-    zh_cn: { name: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'loop.off': '关', 'loop.on': '开', 'param.volume': '音量' },
-    zh_tw: { name: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'loop.off': '關', 'loop.on': '開', 'param.volume': '音量' },
+    ja_jp: { name: 'WevSampler', description: '波形ブロックの音を音色にして、音符の高さに合わせて鳴らします', keywords: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'loop.off': 'しない', 'loop.on': 'する', 'param.volume': '音量' },
+    en_us: { name: 'WevSampler', description: 'Plays a waveform block\'s sound at the pitch of each note.', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'loop.off': 'Off', 'loop.on': 'On', 'param.volume': 'Volume' },
+    ko_kr: { name: 'WevSampler', keywords: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'loop.off': '끄기', 'loop.on': '켜기', 'param.volume': '음량' },
+    zh_cn: { name: 'WevSampler', keywords: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'loop.off': '关', 'loop.on': '开', 'param.volume': '音量' },
+    zh_tw: { name: 'WevSampler', keywords: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'loop.off': '關', 'loop.on': '開', 'param.volume': '音量' },
   },
 )
 

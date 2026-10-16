@@ -25,6 +25,8 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 
 `build` は `dist/` に `manifest.json`（訳文を `lang` に入れたもの）と `processor.js`（と wasm）を出す。配るのはこの中身だけ。
 
+`lang/` の `name` は一覧に出す名前、`description` は一覧の名前の下とツールチップに出す説明、`keywords` は一覧の検索にだけ使う言葉（別の言語の名前や言い換え）。`description` と `keywords` は省略できる。
+
 ## manifest.json
 
 | 項目 | 内容 |

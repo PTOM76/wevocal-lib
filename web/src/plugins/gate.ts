@@ -20,11 +20,11 @@ export const gateManifest: PluginManifest = {
   tail: 0,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'ノイズゲート', 'param.threshold': 'しきい値', 'param.range': '絞る量', 'param.attack': 'アタック', 'param.hold': 'ホールド', 'param.release': 'リリース' },
-    en_us: { name: 'Noise gate', 'param.threshold': 'Threshold', 'param.range': 'Range', 'param.attack': 'Attack', 'param.hold': 'Hold', 'param.release': 'Release' },
-    ko_kr: { name: '노이즈 게이트', 'param.threshold': '스레숄드', 'param.range': '감쇠량', 'param.attack': '어택', 'param.hold': '홀드', 'param.release': '릴리스' },
-    zh_cn: { name: '噪声门', 'param.threshold': '阈值', 'param.range': '衰减量', 'param.attack': '启动', 'param.hold': '保持', 'param.release': '释放' },
-    zh_tw: { name: '噪音閘', 'param.threshold': '臨界值', 'param.range': '衰減量', 'param.attack': '啟動', 'param.hold': '保持', 'param.release': '釋放' },
+    ja_jp: { name: 'WevGate', description: '小さい音（息やノイズ）を絞ります', keywords: 'ノイズゲート', 'param.threshold': 'しきい値', 'param.range': '絞る量', 'param.attack': 'アタック', 'param.hold': 'ホールド', 'param.release': 'リリース' },
+    en_us: { name: 'WevGate', description: 'Attenuates quiet sounds such as breath and noise.', 'param.threshold': 'Threshold', 'param.range': 'Range', 'param.attack': 'Attack', 'param.hold': 'Hold', 'param.release': 'Release' },
+    ko_kr: { name: 'WevGate', keywords: '노이즈 게이트', 'param.threshold': '스레숄드', 'param.range': '감쇠량', 'param.attack': '어택', 'param.hold': '홀드', 'param.release': '릴리스' },
+    zh_cn: { name: 'WevGate', keywords: '噪声门', 'param.threshold': '阈值', 'param.range': '衰减量', 'param.attack': '启动', 'param.hold': '保持', 'param.release': '释放' },
+    zh_tw: { name: 'WevGate', keywords: '噪音閘', 'param.threshold': '臨界值', 'param.range': '衰減量', 'param.attack': '啟動', 'param.hold': '保持', 'param.release': '釋放' },
   },
 }
 

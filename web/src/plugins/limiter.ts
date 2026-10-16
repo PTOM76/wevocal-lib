@@ -37,11 +37,11 @@ class Limiter extends FxBase {
 export const limiterPlugin: FxPlugin = {
   manifest: limiterManifest,
   lang: {
-    ja_jp: { name: 'リミッター', 'param.ceiling': '天井', 'param.release': 'リリース' },
-    en_us: { name: 'Limiter', 'param.ceiling': 'Ceiling', 'param.release': 'Release' },
-    ko_kr: { name: '리미터', 'param.ceiling': '실링', 'param.release': '릴리스' },
-    zh_cn: { name: '限幅器', 'param.ceiling': '上限', 'param.release': '释放' },
-    zh_tw: { name: '限幅器', 'param.ceiling': '上限', 'param.release': '釋放' },
+    ja_jp: { name: 'WevLimiter', description: '設定した天井を超えないように音量を抑えます', keywords: 'リミッター', 'param.ceiling': '天井', 'param.release': 'リリース' },
+    en_us: { name: 'WevLimiter', description: 'Keeps the level from exceeding the set ceiling.', 'param.ceiling': 'Ceiling', 'param.release': 'Release' },
+    ko_kr: { name: 'WevLimiter', keywords: '리미터', 'param.ceiling': '실링', 'param.release': '릴리스' },
+    zh_cn: { name: 'WevLimiter', keywords: '限幅器', 'param.ceiling': '上限', 'param.release': '释放' },
+    zh_tw: { name: 'WevLimiter', keywords: '限幅器', 'param.ceiling': '上限', 'param.release': '釋放' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Limiter(ctx, limiterManifest, host).init(values, on),
 }

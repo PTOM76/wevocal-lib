@@ -46,11 +46,11 @@ export const slotToEq = (s: FxSlot): TrackEq => valuesToEq(s.values, s.on)
 export const eqPlugin: FxPlugin = {
   manifest: eqManifest,
   lang: {
-    ja_jp: { name: 'グラフィック EQ', 'param.bands': '帯の数', 'param.range': '上限', 'bands.10': '10 帯', 'bands.31': '31 帯', 'range.12': '±12 dB', 'range.24': '±24 dB' },
-    en_us: { name: 'Graphic EQ', 'param.bands': 'Bands', 'param.range': 'Range', 'bands.10': '10 bands', 'bands.31': '31 bands', 'range.12': '±12 dB', 'range.24': '±24 dB' },
-    ko_kr: { name: '그래픽 EQ', 'param.bands': '밴드 수', 'param.range': '상한', 'bands.10': '10밴드', 'bands.31': '31밴드', 'range.12': '±12 dB', 'range.24': '±24 dB' },
-    zh_cn: { name: '图示均衡器', 'param.bands': '频段数', 'param.range': '上限', 'bands.10': '10 段', 'bands.31': '31 段', 'range.12': '±12 dB', 'range.24': '±24 dB' },
-    zh_tw: { name: '圖形等化器', 'param.bands': '頻段數', 'param.range': '上限', 'bands.10': '10 段', 'bands.31': '31 段', 'range.12': '±12 dB', 'range.24': '±24 dB' },
+    ja_jp: { name: 'WevEQ', description: '周波数帯ごとの強さを調整します（10 帯か 31 帯のグラフィック EQ）', keywords: 'グラフィック EQ', 'param.bands': '帯の数', 'param.range': '上限', 'bands.10': '10 帯', 'bands.31': '31 帯', 'range.12': '±12 dB', 'range.24': '±24 dB' },
+    en_us: { name: 'WevEQ', description: 'Adjusts the level of each frequency band (10 or 31-band graphic EQ).', 'param.bands': 'Bands', 'param.range': 'Range', 'bands.10': '10 bands', 'bands.31': '31 bands', 'range.12': '±12 dB', 'range.24': '±24 dB' },
+    ko_kr: { name: 'WevEQ', keywords: '그래픽 EQ', 'param.bands': '밴드 수', 'param.range': '상한', 'bands.10': '10밴드', 'bands.31': '31밴드', 'range.12': '±12 dB', 'range.24': '±24 dB' },
+    zh_cn: { name: 'WevEQ', keywords: '图示均衡器', 'param.bands': '频段数', 'param.range': '上限', 'bands.10': '10 段', 'bands.31': '31 段', 'range.12': '±12 dB', 'range.24': '±24 dB' },
+    zh_tw: { name: 'WevEQ', keywords: '圖形等化器', 'param.bands': '頻段數', 'param.range': '上限', 'bands.10': '10 段', 'bands.31': '31 段', 'range.12': '±12 dB', 'range.24': '±24 dB' },
   },
   create(ctx, values, _host, on = true) {
     let isOn = on

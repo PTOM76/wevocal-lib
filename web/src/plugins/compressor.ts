@@ -46,7 +46,7 @@ export const compressorPlugin: FxPlugin = {
   manifest: compressorManifest,
   lang: {
     ja_jp: {
-      name: 'コンプレッサー',
+      name: 'WevCompressor', description: '大きい音を抑えて、音量をそろえます', keywords: 'コンプレッサー',
       'param.threshold': 'しきい値',
       'param.ratio': 'レシオ',
       'param.attack': 'アタック',
@@ -54,10 +54,10 @@ export const compressorPlugin: FxPlugin = {
       'param.knee': 'ニー',
       'param.makeup': 'メイクアップ',
     },
-    en_us: { name: 'Compressor', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.attack': 'Attack', 'param.release': 'Release', 'param.knee': 'Knee', 'param.makeup': 'Makeup' },
-    ko_kr: { name: '컴프레서', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.attack': '어택', 'param.release': '릴리스', 'param.knee': '니', 'param.makeup': '메이크업' },
-    zh_cn: { name: '压缩器', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.attack': '启动', 'param.release': '释放', 'param.knee': '拐点', 'param.makeup': '补偿增益' },
-    zh_tw: { name: '壓縮器', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.attack': '啟動', 'param.release': '釋放', 'param.knee': '拐點', 'param.makeup': '補償增益' },
+    en_us: { name: 'WevCompressor', description: 'Reduces loud peaks to even out the level.', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.attack': 'Attack', 'param.release': 'Release', 'param.knee': 'Knee', 'param.makeup': 'Makeup' },
+    ko_kr: { name: 'WevCompressor', keywords: '컴프레서', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.attack': '어택', 'param.release': '릴리스', 'param.knee': '니', 'param.makeup': '메이크업' },
+    zh_cn: { name: 'WevCompressor', keywords: '压缩器', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.attack': '启动', 'param.release': '释放', 'param.knee': '拐点', 'param.makeup': '补偿增益' },
+    zh_tw: { name: 'WevCompressor', keywords: '壓縮器', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.attack': '啟動', 'param.release': '釋放', 'param.knee': '拐點', 'param.makeup': '補償增益' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Compressor(ctx, compressorManifest, host).init(values, on),
 }

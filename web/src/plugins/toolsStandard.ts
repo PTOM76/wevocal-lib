@@ -16,19 +16,19 @@ const fmtDb = (v: number) => (Number.isFinite(v) ? Math.round(v * 10) / 10 : '-�
 // --- 道具 ---
 
 const reverse = make('wevocal.tool.reverse', 'tool', [], {
-  ja_jp: { name: '逆再生' },
-  en_us: { name: 'Reverse' },
-  ko_kr: { name: '역재생' },
-  zh_cn: { name: '倒放' },
-  zh_tw: { name: '倒放' },
+  ja_jp: { name: 'WevReverse', description: '音を逆向きにします', keywords: '逆再生 リバース' },
+  en_us: { name: 'WevReverse', description: 'Reverses the audio.' },
+  ko_kr: { name: 'WevReverse', keywords: '역재생' },
+  zh_cn: { name: 'WevReverse', keywords: '倒放' },
+  zh_tw: { name: 'WevReverse', keywords: '倒放' },
 }, (i) => ({ channels: i.channels.map((c) => c.slice().reverse()) }))
 
 const normalize = make('wevocal.tool.normalize', 'tool', [{ id: 'peak', name: 'param.peak', min: -24, max: 0, default: -1, step: 0.1, unit: 'dB' }], {
-  ja_jp: { name: 'ノーマライズ', 'param.peak': '目標のピーク' },
-  en_us: { name: 'Normalize', 'param.peak': 'Target peak' },
-  ko_kr: { name: '노멀라이즈', 'param.peak': '목표 피크' },
-  zh_cn: { name: '标准化', 'param.peak': '目标峰值' },
-  zh_tw: { name: '標準化', 'param.peak': '目標峰值' },
+  ja_jp: { name: 'WevNormalize', description: '最大の音量を目標のピークにそろえます', keywords: 'ノーマライズ', 'param.peak': '目標のピーク' },
+  en_us: { name: 'WevNormalize', description: 'Scales the audio so its peak reaches the target.', 'param.peak': 'Target peak' },
+  ko_kr: { name: 'WevNormalize', keywords: '노멀라이즈', 'param.peak': '목표 피크' },
+  zh_cn: { name: 'WevNormalize', keywords: '标准化', 'param.peak': '目标峰值' },
+  zh_tw: { name: 'WevNormalize', keywords: '標準化', 'param.peak': '目標峰值' },
 }, (i, v) => {
   const peak = peakOf(i.channels)
   const g = peak > 1e-9 ? 10 ** (v.peak / 20) / peak : 1
@@ -36,11 +36,11 @@ const normalize = make('wevocal.tool.normalize', 'tool', [{ id: 'peak', name: 'p
 })
 
 const dcRemove = make('wevocal.tool.dc', 'tool', [], {
-  ja_jp: { name: '直流成分の除去' },
-  en_us: { name: 'Remove DC offset' },
-  ko_kr: { name: 'DC 오프셋 제거' },
-  zh_cn: { name: '去除直流偏移' },
-  zh_tw: { name: '移除直流偏移' },
+  ja_jp: { name: 'WevDC', description: '音の中心のずれ（直流成分）を取り除きます', keywords: '直流成分の除去 DC' },
+  en_us: { name: 'WevDC', description: 'Removes the DC offset.' },
+  ko_kr: { name: 'WevDC', keywords: 'DC 오프셋 제거' },
+  zh_cn: { name: 'WevDC', keywords: '去除直流偏移' },
+  zh_tw: { name: 'WevDC', keywords: '移除直流偏移' },
 }, (i) => ({
   channels: i.channels.map((c) => {
     let sum = 0
@@ -51,11 +51,11 @@ const dcRemove = make('wevocal.tool.dc', 'tool', [], {
 }))
 
 const mono = make('wevocal.tool.mono', 'tool', [], {
-  ja_jp: { name: 'モノラルにする' },
-  en_us: { name: 'Convert to mono' },
-  ko_kr: { name: '모노로 변환' },
-  zh_cn: { name: '转为单声道' },
-  zh_tw: { name: '轉為單聲道' },
+  ja_jp: { name: 'WevMono', description: '左右の音を 1 つにまとめます', keywords: 'モノラルにする' },
+  en_us: { name: 'WevMono', description: 'Mixes the channels down to mono.' },
+  ko_kr: { name: 'WevMono', keywords: '모노로 변환' },
+  zh_cn: { name: 'WevMono', keywords: '转为单声道' },
+  zh_tw: { name: 'WevMono', keywords: '轉為單聲道' },
 }, (i) => {
   const n = i.channels[0].length
   const out = new Float32Array(n)
@@ -122,11 +122,11 @@ function loudness(input: ToolInput): number {
 }
 
 const loudnessTool = make('wevocal.analyzer.loudness', 'analyzer', [], {
-  ja_jp: { name: 'ラウドネスとピーク', length: '長さ', peak: 'ピーク', rms: 'RMS', lufs: 'ラウドネス（統合）', crest: 'クレストファクター', dc: '直流成分', clip: 'クリップしたサンプル' },
-  en_us: { name: 'Loudness and peak', length: 'Length', peak: 'Peak', rms: 'RMS', lufs: 'Loudness (integrated)', crest: 'Crest factor', dc: 'DC offset', clip: 'Clipped samples' },
-  ko_kr: { name: '라우드니스와 피크', length: '길이', peak: '피크', rms: 'RMS', lufs: '라우드니스(통합)', crest: '크레스트 팩터', dc: 'DC 오프셋', clip: '클리핑된 샘플' },
-  zh_cn: { name: '响度与峰值', length: '长度', peak: '峰值', rms: 'RMS', lufs: '响度（综合）', crest: '波峰因数', dc: '直流偏移', clip: '削波采样' },
-  zh_tw: { name: '響度與峰值', length: '長度', peak: '峰值', rms: 'RMS', lufs: '響度（整合）', crest: '波峰因數', dc: '直流偏移', clip: '削波取樣' },
+  ja_jp: { name: 'WevLoudness', description: 'ピーク、RMS、統合ラウドネスなどを調べます', keywords: 'ラウドネスとピーク 音量 解析', length: '長さ', peak: 'ピーク', rms: 'RMS', lufs: 'ラウドネス（統合）', crest: 'クレストファクター', dc: '直流成分', clip: 'クリップしたサンプル' },
+  en_us: { name: 'WevLoudness', description: 'Measures peak, RMS, integrated loudness and more.', length: 'Length', peak: 'Peak', rms: 'RMS', lufs: 'Loudness (integrated)', crest: 'Crest factor', dc: 'DC offset', clip: 'Clipped samples' },
+  ko_kr: { name: 'WevLoudness', keywords: '라우드니스와 피크', length: '길이', peak: '피크', rms: 'RMS', lufs: '라우드니스(통합)', crest: '크레스트 팩터', dc: 'DC 오프셋', clip: '클리핑된 샘플' },
+  zh_cn: { name: 'WevLoudness', keywords: '响度与峰值', length: '长度', peak: '峰值', rms: 'RMS', lufs: '响度（综合）', crest: '波峰因数', dc: '直流偏移', clip: '削波采样' },
+  zh_tw: { name: 'WevLoudness', keywords: '響度與峰值', length: '長度', peak: '峰值', rms: 'RMS', lufs: '響度（整合）', crest: '波峰因數', dc: '直流偏移', clip: '削波取樣' },
 }, (i): ToolResult => {
   const n = i.channels[0].length
   let sq = 0
@@ -192,11 +192,11 @@ function fft(re: Float64Array, im: Float64Array) {
 }
 
 const spectrumTool = make('wevocal.analyzer.spectrum', 'analyzer', [], {
-  ja_jp: { name: 'スペクトルの特徴', dominant: '一番強い周波数', centroid: '重心（明るさ）', rolloff: '85% の周波数（ロールオフ）', bandLow: '低域（〜250 Hz）の割合', bandMid: '中域（250 Hz〜4 kHz）の割合', bandHigh: '高域（4 kHz〜）の割合' },
-  en_us: { name: 'Spectrum summary', dominant: 'Dominant frequency', centroid: 'Centroid (brightness)', rolloff: '85% roll-off frequency', bandLow: 'Low band (to 250 Hz)', bandMid: 'Mid band (250 Hz to 4 kHz)', bandHigh: 'High band (4 kHz and up)' },
-  ko_kr: { name: '스펙트럼 요약', dominant: '가장 강한 주파수', centroid: '중심(밝기)', rolloff: '85% 롤오프 주파수', bandLow: '저역(250 Hz까지) 비율', bandMid: '중역(250 Hz~4 kHz) 비율', bandHigh: '고역(4 kHz~) 비율' },
-  zh_cn: { name: '频谱概要', dominant: '最强频率', centroid: '重心（明亮度）', rolloff: '85% 滚降频率', bandLow: '低频（250 Hz 以下）占比', bandMid: '中频（250 Hz 至 4 kHz）占比', bandHigh: '高频（4 kHz 以上）占比' },
-  zh_tw: { name: '頻譜概要', dominant: '最強頻率', centroid: '重心（明亮度）', rolloff: '85% 滾降頻率', bandLow: '低頻（250 Hz 以下）占比', bandMid: '中頻（250 Hz 至 4 kHz）占比', bandHigh: '高頻（4 kHz 以上）占比' },
+  ja_jp: { name: 'WevSpectrum', description: '一番強い周波数や、明るさ、帯域ごとの割合を調べます', keywords: 'スペクトルの特徴 周波数 解析', dominant: '一番強い周波数', centroid: '重心（明るさ）', rolloff: '85% の周波数（ロールオフ）', bandLow: '低域（〜250 Hz）の割合', bandMid: '中域（250 Hz〜4 kHz）の割合', bandHigh: '高域（4 kHz〜）の割合' },
+  en_us: { name: 'WevSpectrum', description: 'Measures the dominant frequency, brightness and band balance.', dominant: 'Dominant frequency', centroid: 'Centroid (brightness)', rolloff: '85% roll-off frequency', bandLow: 'Low band (to 250 Hz)', bandMid: 'Mid band (250 Hz to 4 kHz)', bandHigh: 'High band (4 kHz and up)' },
+  ko_kr: { name: 'WevSpectrum', keywords: '스펙트럼 요약', dominant: '가장 강한 주파수', centroid: '중심(밝기)', rolloff: '85% 롤오프 주파수', bandLow: '저역(250 Hz까지) 비율', bandMid: '중역(250 Hz~4 kHz) 비율', bandHigh: '고역(4 kHz~) 비율' },
+  zh_cn: { name: 'WevSpectrum', keywords: '频谱概要', dominant: '最强频率', centroid: '重心（明亮度）', rolloff: '85% 滚降频率', bandLow: '低频（250 Hz 以下）占比', bandMid: '中频（250 Hz 至 4 kHz）占比', bandHigh: '高频（4 kHz 以上）占比' },
+  zh_tw: { name: 'WevSpectrum', keywords: '頻譜概要', dominant: '最強頻率', centroid: '重心（明亮度）', rolloff: '85% 滾降頻率', bandLow: '低頻（250 Hz 以下）占比', bandMid: '中頻（250 Hz 至 4 kHz）占比', bandHigh: '高頻（4 kHz 以上）占比' },
 }, (i): ToolResult => {
   const N = 4096
   const mono = new Float32Array(i.channels[0].length)

@@ -55,11 +55,11 @@ class Filter extends FxBase {
 export const filterPlugin: FxPlugin = {
   manifest: filterManifest,
   lang: {
-    ja_jp: { name: 'フィルター', 'param.type': '種類', 'type.highpass': 'ハイパス', 'type.lowpass': 'ローパス', 'type.bandpass': 'バンドパス', 'type.notch': 'ノッチ', 'param.freq': '周波数', 'param.q': 'Q', 'param.slope': '傾き', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
-    en_us: { name: 'Filter', 'param.type': 'Type', 'type.highpass': 'High-pass', 'type.lowpass': 'Low-pass', 'type.bandpass': 'Band-pass', 'type.notch': 'Notch', 'param.freq': 'Frequency', 'param.q': 'Q', 'param.slope': 'Slope', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
-    ko_kr: { name: '필터', 'param.type': '종류', 'type.highpass': '하이패스', 'type.lowpass': '로우패스', 'type.bandpass': '밴드패스', 'type.notch': '노치', 'param.freq': '주파수', 'param.q': 'Q', 'param.slope': '기울기', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
-    zh_cn: { name: '滤波器', 'param.type': '类型', 'type.highpass': '高通', 'type.lowpass': '低通', 'type.bandpass': '带通', 'type.notch': '陷波', 'param.freq': '频率', 'param.q': 'Q', 'param.slope': '斜率', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
-    zh_tw: { name: '濾波器', 'param.type': '類型', 'type.highpass': '高通', 'type.lowpass': '低通', 'type.bandpass': '帶通', 'type.notch': '陷波', 'param.freq': '頻率', 'param.q': 'Q', 'param.slope': '斜率', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
+    ja_jp: { name: 'WevFilter', description: '高域や低域を切る、特定の帯域を残す、削る（ハイパス、ローパス、バンドパス、ノッチ）', keywords: 'フィルター ハイパス ローパス', 'param.type': '種類', 'type.highpass': 'ハイパス', 'type.lowpass': 'ローパス', 'type.bandpass': 'バンドパス', 'type.notch': 'ノッチ', 'param.freq': '周波数', 'param.q': 'Q', 'param.slope': '傾き', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
+    en_us: { name: 'WevFilter', description: 'High-pass, low-pass, band-pass and notch filters.', 'param.type': 'Type', 'type.highpass': 'High-pass', 'type.lowpass': 'Low-pass', 'type.bandpass': 'Band-pass', 'type.notch': 'Notch', 'param.freq': 'Frequency', 'param.q': 'Q', 'param.slope': 'Slope', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
+    ko_kr: { name: 'WevFilter', keywords: '필터', 'param.type': '종류', 'type.highpass': '하이패스', 'type.lowpass': '로우패스', 'type.bandpass': '밴드패스', 'type.notch': '노치', 'param.freq': '주파수', 'param.q': 'Q', 'param.slope': '기울기', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
+    zh_cn: { name: 'WevFilter', keywords: '滤波器', 'param.type': '类型', 'type.highpass': '高通', 'type.lowpass': '低通', 'type.bandpass': '带通', 'type.notch': '陷波', 'param.freq': '频率', 'param.q': 'Q', 'param.slope': '斜率', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
+    zh_tw: { name: 'WevFilter', keywords: '濾波器', 'param.type': '類型', 'type.highpass': '高通', 'type.lowpass': '低通', 'type.bandpass': '帶通', 'type.notch': '陷波', 'param.freq': '頻率', 'param.q': 'Q', 'param.slope': '斜率', 'slope.12': '12 dB/oct', 'slope.24': '24 dB/oct' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new Filter(ctx, filterManifest, host).init(values, on),
 }

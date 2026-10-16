@@ -19,11 +19,11 @@ export const deesserManifest: PluginManifest = {
   tail: 0,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'ディエッサー', 'param.freq': '周波数', 'param.threshold': 'しきい値', 'param.ratio': 'レシオ', 'param.release': 'リリース' },
-    en_us: { name: 'De-esser', 'param.freq': 'Frequency', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.release': 'Release' },
-    ko_kr: { name: '디에서', 'param.freq': '주파수', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.release': '릴리스' },
-    zh_cn: { name: '去齿音器', 'param.freq': '频率', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.release': '释放' },
-    zh_tw: { name: '去齒音器', 'param.freq': '頻率', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.release': '釋放' },
+    ja_jp: { name: 'WevDeEsser', description: 'サ行の刺さる高域だけを抑えます', keywords: 'ディエッサー', 'param.freq': '周波数', 'param.threshold': 'しきい値', 'param.ratio': 'レシオ', 'param.release': 'リリース' },
+    en_us: { name: 'WevDeEsser', description: 'Reduces harsh sibilance in the high frequencies only.', 'param.freq': 'Frequency', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.release': 'Release' },
+    ko_kr: { name: 'WevDeEsser', keywords: '디에서', 'param.freq': '주파수', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.release': '릴리스' },
+    zh_cn: { name: 'WevDeEsser', keywords: '去齿音器', 'param.freq': '频率', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.release': '释放' },
+    zh_tw: { name: 'WevDeEsser', keywords: '去齒音器', 'param.freq': '頻率', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.release': '釋放' },
   },
 }
 

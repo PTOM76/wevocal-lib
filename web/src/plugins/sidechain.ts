@@ -21,11 +21,11 @@ export const sidechainManifest: PluginManifest = {
   tail: 0,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'サイドチェーン・コンプレッサー', 'param.threshold': 'しきい値', 'param.ratio': 'レシオ', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.makeup': 'メイクアップ' },
-    en_us: { name: 'Sidechain compressor', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.attack': 'Attack', 'param.release': 'Release', 'param.makeup': 'Makeup' },
-    ko_kr: { name: '사이드체인 컴프레서', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.attack': '어택', 'param.release': '릴리스', 'param.makeup': '메이크업' },
-    zh_cn: { name: '侧链压缩器', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.attack': '启动', 'param.release': '释放', 'param.makeup': '补偿增益' },
-    zh_tw: { name: '側鏈壓縮器', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.attack': '啟動', 'param.release': '釋放', 'param.makeup': '補償增益' },
+    ja_jp: { name: 'WevSidechain', description: 'ほかのトラックの音の大きさで、このトラックの音量を下げます（キックに合わせて伴奏を引っ込めるなど）', keywords: 'サイドチェーン コンプレッサー', 'param.threshold': 'しきい値', 'param.ratio': 'レシオ', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.makeup': 'メイクアップ' },
+    en_us: { name: 'WevSidechain', description: 'Lowers this track by the loudness of another track (for example, ducking a backing track under a kick).', 'param.threshold': 'Threshold', 'param.ratio': 'Ratio', 'param.attack': 'Attack', 'param.release': 'Release', 'param.makeup': 'Makeup' },
+    ko_kr: { name: 'WevSidechain', keywords: '사이드체인 컴프레서', 'param.threshold': '스레숄드', 'param.ratio': '레이쇼', 'param.attack': '어택', 'param.release': '릴리스', 'param.makeup': '메이크업' },
+    zh_cn: { name: 'WevSidechain', keywords: '侧链压缩器', 'param.threshold': '阈值', 'param.ratio': '压缩比', 'param.attack': '启动', 'param.release': '释放', 'param.makeup': '补偿增益' },
+    zh_tw: { name: 'WevSidechain', keywords: '側鏈壓縮器', 'param.threshold': '臨界值', 'param.ratio': '壓縮比', 'param.attack': '啟動', 'param.release': '釋放', 'param.makeup': '補償增益' },
   },
 }
 

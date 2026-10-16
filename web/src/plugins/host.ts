@@ -55,6 +55,9 @@ export function fxText(p: Pick<FxPlugin, 'lang'>, key: string, lang: string): st
   return p.lang[lang]?.[key] ?? p.lang.en_us?.[key] ?? key
 }
 
+/** プラグインの説明（アプリの言語 → en_us → なし）。一覧のツールチップなどに出す */
+export const fxDescription = (p: Pick<FxPlugin, 'lang'>, lang: string): string => p.lang[lang]?.description ?? p.lang.en_us?.description ?? ''
+
 /** オンのプラグインの余韻の最大（秒）。値で変わるもの（ディレイ）は値から求める */
 export const chainTail = (slots: FxSlot[] | undefined, bpm = 120) =>
   Math.max(

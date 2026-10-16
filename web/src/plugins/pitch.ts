@@ -21,11 +21,11 @@ export const pitchManifest: PluginManifest = {
   tail: 0.05,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは約 16 ミリ秒です', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマント', 'keep.follow': 'ピッチと一緒に動かす', 'keep.keep': '元のまま保つ' },
+    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは約 16 ミリ秒です', keywords: 'ピッチ フォルマント ピッチシフト', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマント', 'keep.follow': 'ピッチと一緒に動かす', 'keep.keep': '元のまま保つ' },
     en_us: { name: 'WevPitch', description: 'Changes pitch and formants (vocal tone) live during playback. Latency is about 16 ms.', 'param.pitch': 'Pitch (semitones)', 'param.formant': 'Formant (semitones)', 'param.keep': 'Formant', 'keep.follow': 'Follow the pitch', 'keep.keep': 'Keep the original' },
-    ko_kr: { name: 'WevPitch', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트', 'keep.follow': '피치와 함께 이동', 'keep.keep': '원래대로 유지' },
-    zh_cn: { name: 'WevPitch', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '随音高移动', 'keep.keep': '保持原样' },
-    zh_tw: { name: 'WevPitch', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '隨音高移動', 'keep.keep': '保持原樣' },
+    ko_kr: { name: 'WevPitch', keywords: '피치 포먼트', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트', 'keep.follow': '피치와 함께 이동', 'keep.keep': '원래대로 유지' },
+    zh_cn: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '随音高移动', 'keep.keep': '保持原样' },
+    zh_tw: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '隨音高移動', 'keep.keep': '保持原樣' },
   },
 }
 

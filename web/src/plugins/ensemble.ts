@@ -99,11 +99,11 @@ class MultiVoice extends FxBase {
 export const chorusPlugin: FxPlugin = {
   manifest: chorusManifest,
   lang: {
-    ja_jp: { name: 'コーラス', 'param.rate': '速さ', 'param.depth': '深さ', 'param.delay': '遅れ', 'param.mix': 'ミックス' },
-    en_us: { name: 'Chorus', 'param.rate': 'Rate', 'param.depth': 'Depth', 'param.delay': 'Delay', 'param.mix': 'Mix' },
-    ko_kr: { name: '코러스', 'param.rate': '속도', 'param.depth': '깊이', 'param.delay': '지연', 'param.mix': '믹스' },
-    zh_cn: { name: '合唱', 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延迟', 'param.mix': '混合' },
-    zh_tw: { name: '合唱', 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延遲', 'param.mix': '混合' },
+    ja_jp: { name: 'WevChorus', description: '少しずらした音を重ねて、広がりと厚みを足します', keywords: 'コーラス', 'param.rate': '速さ', 'param.depth': '深さ', 'param.delay': '遅れ', 'param.mix': 'ミックス' },
+    en_us: { name: 'WevChorus', description: 'Adds width and thickness by layering slightly shifted copies.', 'param.rate': 'Rate', 'param.depth': 'Depth', 'param.delay': 'Delay', 'param.mix': 'Mix' },
+    ko_kr: { name: 'WevChorus', keywords: '코러스', 'param.rate': '속도', 'param.depth': '깊이', 'param.delay': '지연', 'param.mix': '믹스' },
+    zh_cn: { name: 'WevChorus', keywords: '合唱', 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延迟', 'param.mix': '混合' },
+    zh_tw: { name: 'WevChorus', keywords: '合唱', 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延遲', 'param.mix': '混合' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new MultiVoice(ctx, chorusManifest, host, 2).init(values, on),
 }
@@ -113,11 +113,11 @@ const voiceNames = (l: (n: number) => string) => Object.fromEntries([2, 3, 4, 5,
 export const ensemblePlugin: FxPlugin = {
   manifest: ensembleManifest,
   lang: {
-    ja_jp: { name: 'アンサンブル', 'param.voices': '声の数', ...voiceNames((n) => `${n} 声`), 'param.rate': '速さ', 'param.depth': '深さ', 'param.delay': '遅れ', 'param.spread': '広がり', 'param.mix': 'ミックス' },
-    en_us: { name: 'Ensemble', 'param.voices': 'Voices', ...voiceNames((n) => `${n} voices`), 'param.rate': 'Rate', 'param.depth': 'Depth', 'param.delay': 'Delay', 'param.spread': 'Spread', 'param.mix': 'Mix' },
-    ko_kr: { name: '앙상블', 'param.voices': '성부 수', ...voiceNames((n) => `${n}성부`), 'param.rate': '속도', 'param.depth': '깊이', 'param.delay': '지연', 'param.spread': '확산', 'param.mix': '믹스' },
-    zh_cn: { name: '合奏', 'param.voices': '声部数', ...voiceNames((n) => `${n} 声部`), 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延迟', 'param.spread': '宽度', 'param.mix': '混合' },
-    zh_tw: { name: '合奏', 'param.voices': '聲部數', ...voiceNames((n) => `${n} 聲部`), 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延遲', 'param.spread': '寬度', 'param.mix': '混合' },
+    ja_jp: { name: 'WevEnsemble', description: '揺らした声を最大 8 つ重ねて、合唱のように左右に広げます', keywords: 'アンサンブル', 'param.voices': '声の数', ...voiceNames((n) => `${n} 声`), 'param.rate': '速さ', 'param.depth': '深さ', 'param.delay': '遅れ', 'param.spread': '広がり', 'param.mix': 'ミックス' },
+    en_us: { name: 'WevEnsemble', description: 'Layers up to 8 modulated voices and spreads them across the stereo field.', 'param.voices': 'Voices', ...voiceNames((n) => `${n} voices`), 'param.rate': 'Rate', 'param.depth': 'Depth', 'param.delay': 'Delay', 'param.spread': 'Spread', 'param.mix': 'Mix' },
+    ko_kr: { name: 'WevEnsemble', keywords: '앙상블', 'param.voices': '성부 수', ...voiceNames((n) => `${n}성부`), 'param.rate': '속도', 'param.depth': '깊이', 'param.delay': '지연', 'param.spread': '확산', 'param.mix': '믹스' },
+    zh_cn: { name: 'WevEnsemble', keywords: '合奏', 'param.voices': '声部数', ...voiceNames((n) => `${n} 声部`), 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延迟', 'param.spread': '宽度', 'param.mix': '混合' },
+    zh_tw: { name: 'WevEnsemble', keywords: '合奏', 'param.voices': '聲部數', ...voiceNames((n) => `${n} 聲部`), 'param.rate': '速度', 'param.depth': '深度', 'param.delay': '延遲', 'param.spread': '寬度', 'param.mix': '混合' },
   },
   create: (ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on = true) => new MultiVoice(ctx, ensembleManifest, host, null).init(values, on),
 }

@@ -3,7 +3,7 @@ import { useRef, useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
 import { PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
-import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
+import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxDescription, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
 import { presetsFromJson, presetsToJson } from '../plugins/presets'
 import { downloadBlob } from '../wav'
@@ -160,9 +160,11 @@ export default function FxChainDialog(p: {
                   }}
                 >
                   <Switch size="small" checked={s.on} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { on: e.target.checked })} slotProps={{ input: { 'aria-label': t('fx.on') } }} />
-                  <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
-                    {pl ? name(pl) : s.plugin}
-                  </Typography>
+                  <Tooltip title={pl ? fxDescription(pl, p.lang) : ''} placement="right" enterDelay={500}>
+                    <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
+                      {pl ? name(pl) : s.plugin}
+                    </Typography>
+                  </Tooltip>
                   {pl?.manifest.realtime === false && (
                     <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }} title={t('fx.offlineOnlyHelp')}>
                       {t('fx.offlineOnly')}
