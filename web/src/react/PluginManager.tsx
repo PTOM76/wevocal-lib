@@ -2,12 +2,12 @@
 import { useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, TextField, Typography } from '@mui/material'
 import { WindowDialog, pevenFont } from 'pevenmui'
-import { fetchPackage, fxText, installPackage, installedPlugins, PluginError, pluginsVersion, removePlugin, subscribePlugins, type PluginPackage } from '../plugins'
+import { fetchPackage, fxText, installPackage, installedPlugins, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, type PluginPackage } from '../plugins'
 
 /** この画面が使う訳文のキー（アプリの訳文に同じキーを置く） */
 export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
-  | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace'
+  | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
   | 'plugins.error.fetch' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
 
 export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Record<string, string | number>) => string; lang: string }) {
@@ -18,6 +18,17 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // 確かめている途中のもの（導入を押すまで保存しない）
+  // 更新の結果の表示（id ごと）
+  const [updated, setUpdated] = useState<Record<string, string>>({})
+  const update = async (id: string) => {
+    setUpdated((u) => ({ ...u, [id]: '…' }))
+    try {
+      const r = await updatePlugin(id)
+      setUpdated((u) => ({ ...u, [id]: t(r === 'updated' ? 'plugins.updated' : r === 'same' ? 'plugins.upToDate' : 'plugins.noSource') }))
+    } catch (e) {
+      setUpdated((u) => ({ ...u, [id]: t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`) }))
+    }
+  }
   const [pending, setPending] = useState<PluginPackage | null>(null)
 
   const fetchIt = async () => {
@@ -66,6 +77,10 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
               {pl.manifest.id} · {pl.manifest.version} · {pl.manifest.author}
             </Typography>
           </Box>
+          {updated[pl.manifest.id] && <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{updated[pl.manifest.id]}</Typography>}
+          <Button size="small" onClick={() => void update(pl.manifest.id)}>
+            {t('plugins.update')}
+          </Button>
           <IconButton size="small" aria-label={t('plugins.remove')} title={t('plugins.remove')} onClick={() => void removePlugin(pl.manifest.id)}>
             ×
           </IconButton>

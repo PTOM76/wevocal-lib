@@ -1,12 +1,24 @@
-// プラグインの導入と保存（URL から取得してキャッシュ（Cache Storage）に置く。ネットが無くても使える）
+// プラグインの導入と保存。URL から取得して、置き場（PevenMUI の createPackageStore。Cache Storage と、選んだフォルダー）に置く。ネットが無くても使える
 import { makeExternalPlugin, type PluginPackage } from './external'
 import { setInstalledPlugins } from './registry'
 import { PluginError, validateManifest } from './validate'
 import type { FxPlugin } from '../../../plugin-sdk'
 
-const CACHE = 'wevocal-plugins'
-/** キャッシュ内の仮の住所（実在しない。id ごとに manifest.json、processor.js、module.wasm を置く） */
-const key = (id: string, file: string) => `https://plugins.wevocal.invalid/${encodeURIComponent(id)}/${file}`
+/** プラグインの置き場（PevenMUI の PackageStore と同じ形。wevocal-lib の本体は PevenMUI に依存しないので、アプリが setPluginStore で渡す） */
+export interface PluginStore {
+  put(id: string, files: Record<string, string | ArrayBuffer>): Promise<void>
+  get(id: string, path: string): Promise<ArrayBuffer | null>
+  getText(id: string, path: string): Promise<string | null>
+  ids(): Promise<string[]>
+  remove(id: string): Promise<void>
+}
+
+let store: PluginStore | null = null
+
+/** 置き場を決める（アプリの起動時に、loadInstalledPlugins より先に呼ぶ） */
+export function setPluginStore(s: PluginStore) {
+  store = s
+}
 
 /** 取得して中身を返す。失敗は PluginError('fetch') */
 async function get(url: URL): Promise<Response> {
@@ -25,25 +37,40 @@ export async function fetchPackage(url: string): Promise<PluginPackage> {
   if (!manifest.processor) throw new PluginError('processor')
   const processor = await (await get(new URL(manifest.processor, base))).text()
   const wasm = manifest.wasm ? await (await get(new URL(manifest.wasm, base))).arrayBuffer() : undefined
-  return { manifest, processor, wasm }
+  return { manifest, processor, wasm, source: base.href }
 }
 
 /** 導入する（同じ id は置き換える） */
 export async function installPackage(pkg: PluginPackage): Promise<void> {
-  const cache = await caches.open(CACHE)
-  const id = pkg.manifest.id
-  await cache.put(key(id, 'manifest.json'), new Response(JSON.stringify(pkg.manifest), { headers: { 'content-type': 'application/json' } }))
-  await cache.put(key(id, 'processor.js'), new Response(pkg.processor, { headers: { 'content-type': 'text/javascript' } }))
-  if (pkg.wasm) await cache.put(key(id, 'module.wasm'), new Response(pkg.wasm))
-  else await cache.delete(key(id, 'module.wasm'))
+  if (!store) throw new PluginError('fetch')
+  const files: Record<string, string | ArrayBuffer> = { 'manifest.json': JSON.stringify(pkg.manifest), 'processor.js': pkg.processor }
+  if (pkg.wasm) files['module.wasm'] = pkg.wasm
+  if (pkg.source) files['source.txt'] = pkg.source
+  await store.put(pkg.manifest.id, files)
   await loadInstalledPlugins()
 }
 
 /** 削除する */
 export async function removePlugin(id: string): Promise<void> {
-  const cache = await caches.open(CACHE)
-  for (const f of ['manifest.json', 'processor.js', 'module.wasm']) await cache.delete(key(id, f))
+  await store?.remove(id)
   await loadInstalledPlugins()
+}
+
+/** 取得元の URL（更新に使う。直接足したものなど、無ければ null） */
+export async function pluginSource(id: string): Promise<string | null> {
+  return (await store?.getText(id, 'source.txt')) ?? null
+}
+
+/** 更新を確かめて、版が違えば入れ替える。'updated'、'same'、'none'（取得元が分からない）を返す。取得できなければ PluginError */
+export async function updatePlugin(id: string): Promise<'updated' | 'same' | 'none'> {
+  const source = await pluginSource(id)
+  if (!source) return 'none'
+  const pkg = await fetchPackage(source)
+  if (pkg.manifest.id !== id) throw new PluginError('id')
+  const current = (await store?.getText(id, 'manifest.json').then((t) => (t ? validateManifest(JSON.parse(t)) : null)).catch(() => null))?.version
+  if (current === pkg.manifest.version) return 'same'
+  await installPackage(pkg)
+  return 'updated'
 }
 
 /** 最初の読み込み（起動時）。これを待てば、導入済みのプラグインが findPlugin で見つかる */
@@ -58,16 +85,15 @@ export function loadInstalledPlugins(): Promise<void> {
 }
 
 async function readInstalled(): Promise<void> {
-  if (typeof caches === 'undefined') return
-  const cache = await caches.open(CACHE)
+  if (!store) return
   const list: FxPlugin[] = []
-  for (const req of await cache.keys()) {
-    if (!req.url.endsWith('/manifest.json')) continue
+  for (const id of await store.ids().catch(() => [])) {
     try {
-      const manifest = validateManifest(await (await cache.match(req))!.json())
-      const processor = await (await cache.match(key(manifest.id, 'processor.js')))?.text()
-      if (!processor) continue
-      const wasm = await (await cache.match(key(manifest.id, 'module.wasm')))?.arrayBuffer()
+      const text = await store.getText(id, 'manifest.json')
+      const processor = await store.getText(id, 'processor.js')
+      if (!text || !processor) continue
+      const manifest = validateManifest(JSON.parse(text))
+      const wasm = (await store.get(id, 'module.wasm')) ?? undefined
       list.push(makeExternalPlugin({ manifest, processor, wasm }))
     } catch {
       // 壊れたものは飛ばす

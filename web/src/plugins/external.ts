@@ -8,6 +8,8 @@ export interface PluginPackage {
   manifest: PluginManifest
   processor: string
   wasm?: ArrayBuffer
+  /** 取得元のマニフェストの URL（更新に使う） */
+  source?: string
 }
 
 /**
