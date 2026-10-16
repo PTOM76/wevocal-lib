@@ -15,7 +15,7 @@ import FxParams from './FxParams'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
 
 type Values = Record<string, number>
 
@@ -102,6 +102,11 @@ export default function FxChainDialog(p: {
                   <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
                     {pl ? name(pl) : s.plugin}
                   </Typography>
+                  {pl?.manifest.realtime === false && (
+                    <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }} title={t('fx.offlineOnlyHelp')}>
+                      {t('fx.offlineOnly')}
+                    </Typography>
+                  )}
                   {isOverloaded(s.plugin) ? (
                     <Typography sx={{ fontSize: pevenFont('sm'), color: 'error.main' }} title={t('fx.overloadedHelp')}>
                       {t('fx.overloaded')}

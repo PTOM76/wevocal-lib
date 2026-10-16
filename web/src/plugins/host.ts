@@ -87,6 +87,8 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
     // 見つからないプラグイン（入っていない）は素通し。値は slots に残る
     current = list.map((s) => {
       const pl = findPlugin(s.plugin)
+      // 書き出し専用（realtime: false）は、再生中は通さず素通しにする。書き出し（OfflineAudioContext）では掛ける
+      if (pl?.manifest.realtime === false && ctx instanceof AudioContext) return null
       return pl?.create(ctx, migrateValues(pl.manifest, s.values), host, s.on) ?? null
     })
     let last: AudioNode = input
