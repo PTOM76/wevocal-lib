@@ -88,6 +88,8 @@ class WorkletFx extends FxBase {
   private wanted = true
   private overloaded = false
   private streak = 0
+  /** つまみの値を一度入れたか（最初は、ならさずにそのまま入れる） */
+  private applied = false
 
   private readonly pkg: PluginPackage
 
@@ -163,7 +165,13 @@ class WorkletFx extends FxBase {
   protected apply(v: Record<string, number>, now: number) {
     this.latest = v
     if (!this.node) return
-    for (const [id, x] of Object.entries(v)) this.node.parameters.get(id)?.setTargetAtTime(x, now, SMOOTH)
+    const first = !this.applied
+    this.applied = Object.keys(v).length > 0
+    for (const [id, x] of Object.entries(v)) {
+      const param = this.node.parameters.get(id)
+      if (first) param?.setValueAtTime(x, now)
+      else param?.setTargetAtTime(x, now, SMOOTH)
+    }
   }
 
   dispose() {

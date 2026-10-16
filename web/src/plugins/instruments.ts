@@ -329,10 +329,16 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
     for (const m of pending) node.port.postMessage(m)
     pending.length = 0
   }
+  let applied = false
   const apply = () => {
     if (!node) return
     const now = ctx.currentTime
-    for (const [id, x] of Object.entries(latest)) node.parameters.get(id)?.setTargetAtTime(x, now, 0.01)
+    // 最初は、ならさずにそのまま入れる
+    for (const [id, x] of Object.entries(latest)) {
+      if (applied) node.parameters.get(id)?.setTargetAtTime(x, now, 0.01)
+      else node.parameters.get(id)?.setValueAtTime(x, now)
+    }
+    applied = true
   }
   const send = (m: unknown) => (node ? node.port.postMessage(m) : pending.push(m))
 

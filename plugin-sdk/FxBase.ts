@@ -20,6 +20,8 @@ export abstract class FxBase implements FxInstance {
   private readonly bypass: GainNode
   private readonly tracked: AudioNode[] = []
   private values: Record<string, number> = {}
+  /** 作った直後の値は、ならさずにそのまま入れる（track したノードのつまみの setTargetAtTime を、この間だけ setValueAtTime にする） */
+  private warm = false
 
   protected readonly ctx: BaseAudioContext
   protected readonly manifest: PluginManifest
@@ -42,7 +44,9 @@ export abstract class FxBase implements FxInstance {
   /** 組み立てる（作った直後に 1 回。サブクラスのフィールドが決まってから呼ぶため、コンストラクターでは呼ばない） */
   init(values: Record<string, number>, on = true): this {
     this.build()
+    this.warm = true
     this.update(values)
+    this.warm = false
     this.setOn(on, true)
     return this
   }
@@ -73,6 +77,12 @@ export abstract class FxBase implements FxInstance {
   /** 片付けの対象に登録する */
   protected track<T extends AudioNode>(node: T): T {
     this.tracked.push(node)
+    for (const key in node) {
+      const param = (node as unknown as Record<string, unknown>)[key]
+      if (!(param instanceof AudioParam)) continue
+      const target = param.setTargetAtTime.bind(param)
+      param.setTargetAtTime = (v, t, tc) => (this.warm ? param.setValueAtTime(v, t) : target(v, t, tc))
+    }
     return node
   }
 }
