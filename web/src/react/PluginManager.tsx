@@ -1,16 +1,16 @@
 // プラグインの導入と管理の画面（設定の「プラグイン」の中身。WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
-import { useState, useSyncExternalStore } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, TextField, Typography } from '@mui/material'
 import { WindowDialog, pevenFont } from 'pevenmui'
-import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, installedTools, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, type PluginPackage } from '../plugins'
+import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, installedTools, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, vstPackageFromFile, vstPackageFromUrl, type PluginPackage } from '../plugins'
 
 /** この画面が使う訳文のキー（アプリの訳文に同じキーを置く） */
 export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
   | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
-  | 'plugins.error.fetch' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
 
-export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Record<string, string | number>) => string; lang: string }) {
+export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Record<string, string | number>) => string; lang: string; /** 試験的機能の VST（DLL をエミュレーターで動かす）の入口を出すか */ vst?: boolean }) {
   const t = p.t
   useSyncExternalStore(subscribePlugins, pluginsVersion)
   // 導入したもの（エフェクトと音源）
@@ -32,15 +32,32 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   }
   const [pending, setPending] = useState<PluginPackage | null>(null)
 
+  const fileInput = useRef<HTMLInputElement>(null)
   const fetchIt = async () => {
     setBusy(true)
     setError('')
     try {
-      setPending(await fetchPackage(url.trim()))
+      const u = url.trim()
+      // .dll で終わる URL は VST として取り込む（試験的機能がオンのとき）
+      setPending(p.vst && /\.dll(\?.*)?$/i.test(u) ? await vstPackageFromUrl(u) : await fetchPackage(u))
     } catch (e) {
       setError(t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`))
     } finally {
       setBusy(false)
+    }
+  }
+  /** DLL のファイルを選んだとき */
+  const pickDll = async (file: File | undefined) => {
+    if (!file) return
+    setBusy(true)
+    setError('')
+    try {
+      setPending(await vstPackageFromFile(file))
+    } catch (e) {
+      setError(t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`))
+    } finally {
+      setBusy(false)
+      if (fileInput.current) fileInput.current.value = ''
     }
   }
   const install = async () => {
@@ -67,6 +84,15 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
           {t('plugins.add')}
         </Button>
       </Box>
+      {p.vst && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <input ref={fileInput} type="file" accept=".dll" hidden onChange={(e) => void pickDll(e.target.files?.[0])} />
+          <Button size="small" disabled={busy} onClick={() => fileInput.current?.click()}>
+            {t('plugins.vst.pick')}
+          </Button>
+          <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{t('plugins.vst.notice')}</Typography>
+        </Box>
+      )}
       {!list.length && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('plugins.empty')}</Typography>}
       {list.map((pl) => (
         <Box key={pl.manifest.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

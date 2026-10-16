@@ -8,6 +8,8 @@ export interface PluginPackage {
   manifest: PluginManifest
   processor: string
   wasm?: ArrayBuffer
+  /** processor が読むもう一つのファイル（VST の DLL など。processorOptions.dll で渡す。format: 'vst' のとき） */
+  dll?: ArrayBuffer
   /** 独自の画面の HTML */
   ui?: string
   /** 取得元のマニフェストの URL（更新に使う） */
@@ -121,7 +123,7 @@ class WorkletFx extends FxBase {
       numberOfInputs: this.sidechainIn ? 2 : 1,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { wasm: this.pkg.wasm, sampleRate: this.ctx.sampleRate, state: this.state },
+      processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state },
     })
     this.node = node
     if (this.sidechainIn) this.sidechainIn.connect(node, 0, 1)

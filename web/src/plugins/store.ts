@@ -48,6 +48,7 @@ export async function installPackage(pkg: PluginPackage): Promise<void> {
   if (!store) throw new PluginError('fetch')
   const files: Record<string, string | ArrayBuffer> = { 'manifest.json': JSON.stringify(pkg.manifest), 'processor.js': pkg.processor }
   if (pkg.wasm) files['module.wasm'] = pkg.wasm
+  if (pkg.dll) files['plugin.dll'] = pkg.dll
   if (pkg.ui) files['ui.html'] = pkg.ui
   if (pkg.source) files['source.txt'] = pkg.source
   await store.put(pkg.manifest.id, files)
@@ -71,7 +72,7 @@ export async function updatePlugin(id: string): Promise<'updated' | 'same' | 'no
   if (!source) return 'none'
   const pkg = await fetchPackage(source)
   if (pkg.manifest.id !== id) throw new PluginError('id')
-  const current = (await store?.getText(id, 'manifest.json').then((t) => (t ? validateManifest(JSON.parse(t)) : null)).catch(() => null))?.version
+  const current = (await store?.getText(id, 'manifest.json').then((t) => (t ? validateManifest(JSON.parse(t), true) : null)).catch(() => null))?.version
   if (current === pkg.manifest.version) return 'same'
   await installPackage(pkg)
   return 'updated'
@@ -98,10 +99,11 @@ async function readInstalled(): Promise<void> {
       const text = await store.getText(id, 'manifest.json')
       const processor = await store.getText(id, 'processor.js')
       if (!text || !processor) continue
-      const manifest = validateManifest(JSON.parse(text))
+      const manifest = validateManifest(JSON.parse(text), true)
       const wasm = (await store.get(id, 'module.wasm')) ?? undefined
+      const dll = (await store.get(id, 'plugin.dll')) ?? undefined
       const ui = manifest.ui ? ((await store.getText(id, 'ui.html')) ?? undefined) : undefined
-      const pkg = { manifest, processor, wasm, ui }
+      const pkg = { manifest, processor, wasm, dll, ui }
       if (manifest.kind === 'tool' || manifest.kind === 'analyzer') tools.push({ manifest, lang: manifest.lang ?? {}, pkg })
       else if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
       else list.push(makeExternalPlugin(pkg))
