@@ -42,6 +42,7 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 | `tail` | 余韻の秒。曲の終わりの計算に使う |
 | `latency` | 遅れ（サンプル）。遅れが違うトラックを、ホストが入口で遅らせてそろえる |
 | `realtime` | `false` なら書き出し専用。再生中は素通しで、書き出しのときだけ掛かる |
+| `anticipative` | `false` なら、先に計算して鳴らす対象にしない（乱数や時刻で音が変わるものなど）。既定は対象 |
 | `sidechain` | `true` なら二つ目の入力（サイドチェーン）を持つ。利用者が、音を取るトラックを選べる |
 | `ui` | 独自の画面の HTML（無ければつまみから自動で作る）。下の「独自の画面」 |
 | `presets` | 同梱のプリセット（`name` と `values`） |
