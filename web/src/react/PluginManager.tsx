@@ -8,7 +8,13 @@ import { fetchPackage, fxText, installPackage, installedInstruments, installedPl
 export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
   | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
-  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+
+/** エラーを画面の文にする（VST の読み込みの失敗は、理由の詳細を添える） */
+function errorText(t: (key: PluginManagerKey) => string, e: unknown) {
+  const base = t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}` as PluginManagerKey)
+  return e instanceof PluginError && e.detail ? `${base}（${e.detail}）` : base
+}
 
 export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Record<string, string | number>) => string; lang: string; /** 試験的機能の VST（DLL をエミュレーターで動かす）の入口を出すか */ vst?: boolean }) {
   const t = p.t
@@ -27,7 +33,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
       const r = await updatePlugin(id)
       setUpdated((u) => ({ ...u, [id]: t(r === 'updated' ? 'plugins.updated' : r === 'same' ? 'plugins.upToDate' : 'plugins.noSource') }))
     } catch (e) {
-      setUpdated((u) => ({ ...u, [id]: t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`) }))
+      setUpdated((u) => ({ ...u, [id]: errorText(t, e) }))
     }
   }
   const [pending, setPending] = useState<PluginPackage | null>(null)
@@ -41,7 +47,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
       // .dll で終わる URL は VST として取り込む（試験的機能がオンのとき）
       setPending(p.vst && /\.dll(\?.*)?$/i.test(u) ? await vstPackageFromUrl(u) : await fetchPackage(u))
     } catch (e) {
-      setError(t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`))
+      setError(errorText(t, e))
     } finally {
       setBusy(false)
     }
@@ -54,7 +60,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
     try {
       setPending(await vstPackageFromFile(file))
     } catch (e) {
-      setError(t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}`))
+      setError(errorText(t, e))
     } finally {
       setBusy(false)
       if (fileInput.current) fileInput.current.value = ''

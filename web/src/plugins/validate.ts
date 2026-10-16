@@ -1,14 +1,17 @@
 // プラグインのマニフェストの検査（URL から足すもの。信用しない入力として形を確かめる）
 import type { ParamDef, PluginManifest } from '../../../plugin-sdk'
 
-export type PluginErrorCode = 'fetch' | 'manifest' | 'api' | 'kind' | 'format' | 'id' | 'processor' | 'reserved'
+export type PluginErrorCode = 'fetch' | 'manifest' | 'api' | 'kind' | 'format' | 'id' | 'processor' | 'reserved' | 'vst'
 
 export class PluginError extends Error {
   readonly code: PluginErrorCode
+  /** 理由の詳細（VST を読み込めなかったときの、エミュレーターのエラーなど。画面に添えて出す） */
+  readonly detail?: string
 
-  constructor(code: PluginErrorCode) {
-    super(code)
+  constructor(code: PluginErrorCode, detail?: string) {
+    super(detail ? `${code}: ${detail}` : code)
     this.code = code
+    this.detail = detail
   }
 }
 

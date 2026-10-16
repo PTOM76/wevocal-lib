@@ -95,8 +95,9 @@ export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<Pl
   let vst: JsVst
   try {
     vst = new JsVst(new Uint8Array(dll))
-  } catch {
-    throw new PluginError('manifest')
+  } catch (e) {
+    // DLL でない、エミュレーターが対応していない命令や API を使っている、など。理由をそのまま添える
+    throw new PluginError('vst', e instanceof Error ? e.message : String(e))
   }
   try {
     const name = vst.name() || fileName.replace(/\.dll$/i, '')
