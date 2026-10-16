@@ -1,7 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useRef, useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
-import { ContextMenu, PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
+import { PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
@@ -10,6 +10,7 @@ import { downloadBlob } from '../wav'
 import { EqPanel, type EqDialogKey } from './EqDialog'
 import { isOverloaded, loadOf, loadVersion, pluginsVersion, subscribeLoad, subscribePlugins } from '../plugins/registry'
 import { Choice } from './ExportDialog'
+import FxAddPicker from './FxAddPicker'
 import FxParams from './FxParams'
 import PluginUi from './PluginUi'
 
@@ -17,7 +18,7 @@ import PluginUi from './PluginUi'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
 
 type Values = Record<string, number>
 
@@ -63,7 +64,8 @@ export default function FxChainDialog(p: {
   const dragRef = useRef<number | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState(false)
-  const [addAt, setAddAt] = useState<{ x: number; y: number } | null>(null)
+  // 追加するエフェクトを選んでいる（右側に、探せる一覧を出す）
+  const [adding, setAdding] = useState(false)
   const index = Math.min(sel, p.slots.length - 1)
   const slot = p.slots[index] as FxSlot | undefined
   const plugin = slot && findPlugin(slot.plugin)
@@ -90,6 +92,7 @@ export default function FxChainDialog(p: {
   const add = (pl: FxPlugin) => {
     p.onChange([...p.slots, newSlot(pl)])
     setSel(p.slots.length)
+    setAdding(false)
   }
   const remove = (i: number) => {
     p.onChange(p.slots.filter((_, j) => j !== i))
@@ -187,24 +190,17 @@ export default function FxChainDialog(p: {
                 </Box>
               )
             })}
-            <Button
-              size="small"
-              sx={{ alignSelf: 'flex-start' }}
-              onClick={(e) => {
-                const r = e.currentTarget.getBoundingClientRect()
-                setAddAt({ x: r.left, y: r.bottom })
-              }}
-            >
+            <Button size="small" sx={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>
               {t('fx.add')}
             </Button>
-            <ContextMenu position={addAt} entries={plugins.map((pl) => ({ label: name(pl), onClick: () => add(pl) }))} onClose={() => setAddAt(null)} />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            {slot && !plugin && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('fx.missing', { id: slot.plugin })}</Typography>}
-            {slot && plugin && plugin.manifest.id === EQ_ID && (
+            {adding && <FxAddPicker plugins={plugins} lang={p.lang} onPick={add} onCancel={() => setAdding(false)} labels={{ search: t('fx.search'), none: t('fx.noMatch'), cancel: t('fx.addCancel') }} />}
+            {!adding && slot && !plugin && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('fx.missing', { id: slot.plugin })}</Typography>}
+            {!adding && slot && plugin && plugin.manifest.id === EQ_ID && (
               <EqPanel t={t} eq={slotToEq(slot)} onChange={(eq) => patch(index, { values: eqToSlot(eq).values, on: eq.on }, `fx:${index}:eq`)} />
             )}
-            {slot && plugin && plugin.manifest.id !== EQ_ID && (
+            {!adding && slot && plugin && plugin.manifest.id !== EQ_ID && (
               <>
                 <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                   <PresetMenu
