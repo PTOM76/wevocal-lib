@@ -17,8 +17,11 @@ my-plugin/
 ```
 node plugin-sdk/scripts/wevocal-plugin.mjs create my-plugin my.gain
 node plugin-sdk/scripts/wevocal-plugin.mjs check my-plugin
+node plugin-sdk/scripts/wevocal-plugin.mjs test my-plugin
 node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 ```
+
+`test` は processor を Node の中で動かし、決まった音（正弦波、雑音、インパルス）を通した結果を前回のもの（`test/baseline.json`）と比べる。遅れ、余韻、処理時間も表示する。意図した変更なら `--update` で書き直す。
 
 `build` は `dist/` に `manifest.json`（訳文を `lang` に入れたもの）と `processor.js`（と wasm）を出す。配るのはこの中身だけ。
 
