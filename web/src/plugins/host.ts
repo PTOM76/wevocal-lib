@@ -1,10 +1,12 @@
 // WeVocal プラグインのホスト。標準のプラグインの一覧と、FX の列（トラックに掛けるエフェクトを順につなぐ）
 import { compressorPlugin } from './compressor'
+import { deesserPlugin } from './deesser'
 import { delayPlugin } from './delay'
 import { filterPlugin } from './filter'
 import { distortionPlugin } from './distortion'
 import { chorusPlugin, ensemblePlugin } from './ensemble'
 import { eqPlugin } from './eq'
+import { gatePlugin } from './gate'
 import { limiterPlugin } from './limiter'
 import { reverbPlugin } from './reverb'
 import { installedPlugins, pluginsVersion } from './registry'
@@ -12,7 +14,7 @@ import { templatePlugin } from '../../../plugin-sdk/template'
 import type { FxInstance, FxPlugin, FxSlot, HostInfo, PluginManifest } from '../../../plugin-sdk'
 
 /** アプリに同梱する標準のプラグイン（段階が進むと増える） */
-export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, compressorPlugin, filterPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
+export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, gatePlugin, compressorPlugin, deesserPlugin, filterPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
 /** 開発者向けの設定でだけ出すプラグイン（雛形） */
 export const DEV_PLUGINS: FxPlugin[] = [templatePlugin]
 
