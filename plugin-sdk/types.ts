@@ -56,6 +56,12 @@ export interface PluginManifest {
   lang?: Record<string, Record<string, string>>
 }
 
+/** オートメーションの点（曲の頭からの秒と、つまみの値） */
+export interface AutoPoint {
+  t: number
+  v: number
+}
+
 /** 保存する形（トラックの fx の 1 項目） */
 export interface FxSlot {
   /** manifest.id */
@@ -65,6 +71,8 @@ export interface FxSlot {
   values: Record<string, number>
   /** つまみ以外の状態（base64）。processor が port で知らせたものを保存し、次に作るときに渡す */
   state?: string
+  /** オートメーション（つまみの id → 点。点の間は直線でつなぐ。選択肢のつまみは次の点まで保つ）。曲の時間で持つ */
+  auto?: Record<string, AutoPoint[]>
   /** サイドチェーンで音を取るトラックの id（plugin が sidechain を持つとき。無ければ自分の入力で検出する） */
   sidechain?: string
 }

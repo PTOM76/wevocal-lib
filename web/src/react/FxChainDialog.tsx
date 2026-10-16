@@ -17,7 +17,7 @@ import PluginUi from './PluginUi'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
 
 type Values = Record<string, number>
 
@@ -42,6 +42,9 @@ export default function FxChainDialog(p: {
   load?: number | null
   /** サイドチェーンで音を取れるトラック（無ければ選ぶ欄を出さない） */
   sidechainSources?: { id: string; name: string }[]
+  /** 時間軸に出しているオートメーション（何番目の項目の、どのつまみか）と、出すつまみを選ぶ。渡さなければ A のボタンを出さない */
+  autoLane?: { slot: number; param: string } | null
+  onAutoLane?: (lane: { slot: number; param: string } | null) => void
   /** 利用者のプリセット（プラグインの id ごと）。保存はアプリが行う */
   userPresets?: Record<string, Preset<Values>[]>
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
@@ -202,7 +205,22 @@ export default function FxChainDialog(p: {
                     onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
                   />
                 ) : (
-                  <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
+                  <FxParams
+                    plugin={plugin}
+                    values={values}
+                    lang={p.lang}
+                    onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
+                    automation={
+                      p.onAutoLane
+                        ? {
+                            lane: p.autoLane?.slot === index ? p.autoLane.param : null,
+                            has: new Set(Object.entries(slot.auto ?? {}).filter(([, pts]) => pts.length).map(([k]) => k)),
+                            onLane: (param) => p.onAutoLane!(p.autoLane?.slot === index && p.autoLane.param === param ? null : { slot: index, param }),
+                            title: t('fx.autoLane'),
+                          }
+                        : undefined
+                    }
+                  />
                 )}
               </>
             )}

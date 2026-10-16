@@ -14,7 +14,7 @@ export { PitchToolText, ToolDialog, VibratoDialog, SnapDialog, type PitchToolKey
 export { MidiDialog } from './MidiDialog'
 export { default as MarkerTempoDialog, type MarkerTempoKey } from './MarkerTempoDialog'
 export { default as EqDialog, EqPanel, type EqDialogKey } from './EqDialog'
-export { default as FxParams } from './FxParams'
+export { default as FxParams, type FxAutomation } from './FxParams'
 export { default as PluginManager, type PluginManagerKey } from './PluginManager'
 export { default as PluginUi } from './PluginUi'
 export { default as FxChainDialog, type FxChainDialogKey } from './FxChainDialog'
