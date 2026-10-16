@@ -8,6 +8,7 @@ import { chorusPlugin, ensemblePlugin } from './ensemble'
 import { eqPlugin } from './eq'
 import { gatePlugin } from './gate'
 import { limiterPlugin } from './limiter'
+import { pitchPlugin } from './pitch'
 import { reverbPlugin } from './reverb'
 import { sidechainPlugin } from './sidechain'
 import { installedPlugins, pluginsVersion } from './registry'
@@ -15,7 +16,7 @@ import { templatePlugin } from '../../../plugin-sdk/template'
 import type { FxInstance, FxPlugin, FxSlot, HostInfo, PluginManifest } from '../../../plugin-sdk'
 
 /** アプリに同梱する標準のプラグイン（段階が進むと増える） */
-export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, gatePlugin, compressorPlugin, sidechainPlugin, deesserPlugin, filterPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
+export const STANDARD_PLUGINS: FxPlugin[] = [eqPlugin, gatePlugin, compressorPlugin, sidechainPlugin, deesserPlugin, filterPlugin, pitchPlugin, distortionPlugin, delayPlugin, reverbPlugin, chorusPlugin, ensemblePlugin, limiterPlugin]
 /** 開発者向けの設定でだけ出すプラグイン（雛形） */
 export const DEV_PLUGINS: FxPlugin[] = [templatePlugin]
 
