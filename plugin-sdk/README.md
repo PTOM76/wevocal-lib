@@ -70,6 +70,15 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 
 書き出しのときは、音符が `processorOptions.events` で全部渡される。標準のシンセとサンプラーの processor（`web/src/plugins/instruments.ts`）が見本になる。
 
+## 道具と解析のプラグイン
+
+`kind` を `tool`（音を加工する道具）か `analyzer`（音を調べて結果を出す解析）にすると、選んだ波形ブロックの音に対して実行できる。processor には、classic script で `registerTool(fn)` を呼ぶ。`fn(input, values)` は、`input`（`{ channels: Float32Array[], sampleRate }`）と、つまみの値 `values` を受け取り、結果（同期でも Promise でもよい）を返す:
+
+- 道具: `{ channels: Float32Array[] }`（加工した音。長さは変えてよい）
+- 解析: `{ rows: [{ key, value, unit? }] }`（`key` は `lang` の訳文のキー。画面に一覧で出る）
+
+processor は Worker の中で動くので、アプリの中の物には触れず、音と値だけをやり取りする。標準の道具（ノーマライズ、逆再生、直流成分の除去、モノラル）と解析（ラウドネスとピーク、スペクトルの特徴）の関数が、`web/src/plugins/toolsStandard.ts` にある。
+
 ## 独自の画面
 
 マニフェストの `ui` に HTML を指定すると、FX のダイアログのつまみの代わりにその画面を出す。画面は iframe の sandbox（スクリプトだけ許可。アプリの中には触れない）の中で動き、`postMessage` でやり取りする。

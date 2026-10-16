@@ -4,6 +4,8 @@ export { STANDARD_PLUGINS, DEV_PLUGINS, availablePlugins, preloadFx, findPlugin,
 export { installedPlugins, subscribePlugins, pluginsVersion, loadOf, isOverloaded } from './registry'
 export { fetchPackage, installPackage, removePlugin, updatePlugin, pluginSource, setPluginStore, loadInstalledPlugins, whenPluginsLoaded, type PluginStore } from './store'
 export { STANDARD_INSTRUMENTS, installedInstruments, availableInstruments, findInstrument, preloadInstruments, createInstrument, type InstrumentPlugin, type InstrumentInstance, type NoteEvent, type SampleData } from './instruments'
+export { availableTools, findTool, installedTools, runTool, type ToolPlugin, type ToolInput, type ToolResult, type ToolRow } from './tools'
+import './toolsStandard'
 export { presetsToJson, presetsFromJson, type PresetItem } from './presets'
 export { autoValueAt, automatedSlots, hasAutomation, paramToFrac, fracToParam } from './automation'
 export { startRenderLoad } from './renderLoad'

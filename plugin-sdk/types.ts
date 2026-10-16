@@ -23,7 +23,7 @@ export interface PluginManifest {
   /** プラグインの API の版 */
   api: 1
   /** 種類（今は fx だけ） */
-  kind: 'fx' | 'instrument'
+  kind: 'fx' | 'instrument' | 'tool' | 'analyzer'
   /** 中身の形式（今は wevocal だけ作る） */
   format: 'wevocal' | 'wam' | 'vst'
   version: string

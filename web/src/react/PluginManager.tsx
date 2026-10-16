@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, TextField, Typography } from '@mui/material'
 import { WindowDialog, pevenFont } from 'pevenmui'
-import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, type PluginPackage } from '../plugins'
+import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, installedTools, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, type PluginPackage } from '../plugins'
 
 /** この画面が使う訳文のキー（アプリの訳文に同じキーを置く） */
 export type PluginManagerKey =
@@ -14,7 +14,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   const t = p.t
   useSyncExternalStore(subscribePlugins, pluginsVersion)
   // 導入したもの（エフェクトと音源）
-  const list = [...installedPlugins(), ...installedInstruments()]
+  const list = [...installedPlugins(), ...installedInstruments(), ...installedTools()]
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')

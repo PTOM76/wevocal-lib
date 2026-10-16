@@ -1,6 +1,7 @@
 // プラグインの導入と保存。URL から取得して、置き場（PevenMUI の createPackageStore。Cache Storage と、選んだフォルダー）に置く。ネットが無くても使える
 import { makeExternalPlugin, type PluginPackage } from './external'
 import { setInstalledPlugins } from './registry'
+import { setInstalledTools, type ToolPlugin } from './tools'
 import { setInstalledInstruments, type InstrumentPlugin } from './instruments'
 import { PluginError, validateManifest } from './validate'
 import type { FxPlugin } from '../../../plugin-sdk'
@@ -91,6 +92,7 @@ async function readInstalled(): Promise<void> {
   if (!store) return
   const list: FxPlugin[] = []
   const instruments: InstrumentPlugin[] = []
+  const tools: ToolPlugin[] = []
   for (const id of await store.ids().catch(() => [])) {
     try {
       const text = await store.getText(id, 'manifest.json')
@@ -100,12 +102,14 @@ async function readInstalled(): Promise<void> {
       const wasm = (await store.get(id, 'module.wasm')) ?? undefined
       const ui = manifest.ui ? ((await store.getText(id, 'ui.html')) ?? undefined) : undefined
       const pkg = { manifest, processor, wasm, ui }
-      if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
+      if (manifest.kind === 'tool' || manifest.kind === 'analyzer') tools.push({ manifest, lang: manifest.lang ?? {}, pkg })
+      else if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
       else list.push(makeExternalPlugin(pkg))
     } catch {
       // 壊れたものは飛ばす
     }
   }
+  setInstalledTools(tools.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id)))
   setInstalledInstruments(instruments.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id)))
   setInstalledPlugins(list.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id)))
 }
