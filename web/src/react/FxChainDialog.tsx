@@ -6,14 +6,14 @@ import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
 import { EqPanel, type EqDialogKey } from './EqDialog'
-import { pluginsVersion, subscribePlugins } from '../plugins/registry'
+import { isOverloaded, loadOf, loadVersion, pluginsVersion, subscribeLoad, subscribePlugins } from '../plugins/registry'
 import FxParams from './FxParams'
 
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
 
 type Values = Record<string, number>
 
@@ -44,11 +44,15 @@ export default function FxChainDialog(p: {
   const t = p.t
   // 導入したプラグインが増減したら描き直す
   useSyncExternalStore(subscribePlugins, pluginsVersion)
+  // 導入したプラグインの負荷と、重くて素通しにしたもの
+  useSyncExternalStore(subscribeLoad, loadVersion)
   const [sel, setSel] = useState(0)
   const [addAt, setAddAt] = useState<{ x: number; y: number } | null>(null)
   const index = Math.min(sel, p.slots.length - 1)
   const slot = p.slots[index] as FxSlot | undefined
   const plugin = slot && findPlugin(slot.plugin)
+  // 古い版のつまみの id は、プラグインの migrate で読み替えて見せる（直したときに新しい id で保存される）
+  const values = slot && plugin ? migrateValues(plugin.manifest, slot.values) : {}
   const name = (pl: FxPlugin) => fxText(pl, 'name', p.lang)
 
   const patch = (i: number, s: Partial<FxSlot>, merge?: string) => p.onChange(p.slots.map((x, j) => (j === i ? { ...x, ...s } : x)), merge)
@@ -94,6 +98,13 @@ export default function FxChainDialog(p: {
                   <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
                     {pl ? name(pl) : s.plugin}
                   </Typography>
+                  {isOverloaded(s.plugin) ? (
+                    <Typography sx={{ fontSize: pevenFont('sm'), color: 'error.main' }} title={t('fx.overloadedHelp')}>
+                      {t('fx.overloaded')}
+                    </Typography>
+                  ) : (
+                    loadOf(s.plugin) !== undefined && s.on && <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{Math.round(loadOf(s.plugin)! * 100)}%</Typography>
+                  )}
                   <IconButton size="small" aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
                     ↑
                   </IconButton>
@@ -127,7 +138,7 @@ export default function FxChainDialog(p: {
               <>
                 <Box sx={{ mb: 1 }}>
                   <PresetMenu
-                    params={slot.values}
+                    params={values}
                     presets={presets}
                     onApply={(v) => patch(index, { values: { ...defaultValues(plugin.manifest), ...migrateValues(plugin.manifest, v) } })}
                     onChange={(list) => p.onUserPresetsChange?.(plugin.manifest.id, list.filter((x) => !builtin.some((b) => b.name === x.name)))}
@@ -135,7 +146,7 @@ export default function FxChainDialog(p: {
                     disabled={!p.onUserPresetsChange && !builtin.length}
                   />
                 </Box>
-                <FxParams plugin={plugin} values={slot.values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...slot.values, [id]: v } }, `fx:${index}:${id}`)} />
+                <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
               </>
             )}
           </Box>

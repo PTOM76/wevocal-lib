@@ -46,8 +46,18 @@ export async function removePlugin(id: string): Promise<void> {
   await loadInstalledPlugins()
 }
 
+/** 最初の読み込み（起動時）。これを待てば、導入済みのプラグインが findPlugin で見つかる */
+let first: Promise<void> | null = null
+export const whenPluginsLoaded = () => first ?? Promise.resolve()
+
 /** 導入済みを読んで登録簿に入れる（起動時と、導入、削除のあと） */
-export async function loadInstalledPlugins(): Promise<void> {
+export function loadInstalledPlugins(): Promise<void> {
+  const p = readInstalled()
+  first ??= p
+  return p
+}
+
+async function readInstalled(): Promise<void> {
   if (typeof caches === 'undefined') return
   const cache = await caches.open(CACHE)
   const list: FxPlugin[] = []

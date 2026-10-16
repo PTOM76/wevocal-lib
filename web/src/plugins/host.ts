@@ -32,6 +32,11 @@ export function migrateValues(m: PluginManifest, values: Record<string, number>)
   return Object.fromEntries(Object.entries(values).map(([k, v]) => [map[k] ?? k, v]))
 }
 
+/** 入っていないプラグインの id（列の中から。重複は除く）。プロジェクトを開いたときに導入を勧めるために使う */
+export function missingPlugins(...lists: (FxSlot[] | undefined)[]): string[] {
+  return [...new Set(lists.flatMap((l) => (l ?? []).map((s) => s.plugin)))].filter((id) => !findPlugin(id))
+}
+
 /** 新しい項目（既定の値、オン） */
 export const newSlot = (p: FxPlugin): FxSlot => ({ plugin: p.manifest.id, version: p.manifest.version, on: true, values: defaultValues(p.manifest) })
 
@@ -75,7 +80,10 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
   const build = (list: FxSlot[]) => {
     input.disconnect()
     // 見つからないプラグイン（入っていない）は素通し。値は slots に残る
-    current = list.map((s) => findPlugin(s.plugin)?.create(ctx, s.values, host, s.on) ?? null)
+    current = list.map((s) => {
+      const pl = findPlugin(s.plugin)
+      return pl?.create(ctx, migrateValues(pl.manifest, s.values), host, s.on) ?? null
+    })
     let last: AudioNode = input
     for (const n of current) {
       if (!n) continue
@@ -102,7 +110,7 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
       }
       for (const [i, n] of current.entries()) {
         if (!n) continue
-        n.update(list[i].values)
+        n.update(migrateValues(findPlugin(list[i].plugin)!.manifest, list[i].values))
         n.setOn(list[i].on)
       }
     },
