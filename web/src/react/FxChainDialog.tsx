@@ -160,7 +160,7 @@ export default function FxChainDialog(p: {
                   }}
                 >
                   <Switch size="small" checked={s.on} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { on: e.target.checked })} slotProps={{ input: { 'aria-label': t('fx.on') } }} />
-                  <Tooltip title={pl ? fxDescription(pl, p.lang) : ''} placement="right" enterDelay={500}>
+                  <Tooltip title={pl ? fxDescription(pl, p.lang) : ''} placement="top" enterDelay={500}>
                     <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
                       {pl ? name(pl) : s.plugin}
                     </Typography>

@@ -1,6 +1,6 @@
 // エフェクトを選んで追加する一覧（名前で探せる。FX のダイアログの右側に出す）。Enter で一番上のものを追加する
-import { useState } from 'react'
-import { Box, Button, ButtonBase, InputBase, Tooltip, Typography } from '@mui/material'
+import { Fragment, useState } from 'react'
+import { Box, Button, ButtonBase, InputBase, Typography } from '@mui/material'
 import { pevenFont } from 'pevenmui'
 import type { FxPlugin } from '../../../plugin-sdk'
 import { fxDescription, fxText } from '../plugins/host'
@@ -38,7 +38,7 @@ export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPi
       {!hits.length && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{p.labels.none}</Typography>}
       <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 420, overflowY: 'auto' }}>
         {hits.map((pl) => (
-          <Tooltip key={pl.manifest.id} title={fxDescription(pl, p.lang)} placement="right" enterDelay={400}>
+          <Fragment key={pl.manifest.id}>
             <ButtonBase onClick={() => p.onPick(pl)} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25, px: 1, py: 0.75, borderRadius: 0.5, textAlign: 'left', '&:hover': { bgcolor: 'action.hover' } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 2, width: '100%' }}>
                 <Typography sx={{ fontSize: pevenFont('base') }}>{fxText(pl, 'name', p.lang)}</Typography>
@@ -48,7 +48,7 @@ export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPi
               </Box>
               <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{fxDescription(pl, p.lang)}</Typography>
             </ButtonBase>
-          </Tooltip>
+          </Fragment>
         ))}
       </Box>
     </Box>
