@@ -56,6 +56,11 @@ export default function FxChainDialog(p: {
   // 導入したプラグインの負荷と、重くて素通しにしたもの
   useSyncExternalStore(subscribeLoad, loadVersion)
   const [sel, setSel] = useState(0)
+  // ドラッグで並び替えているときの、つかんでいる項目と、落とす位置（その項目の前）
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
+  // 落とす瞬間に読むための写し（state は次の描画まで変わらない）
+  const dragRef = useRef<number | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState(false)
   const [addAt, setAddAt] = useState<{ x: number; y: number } | null>(null)
@@ -72,6 +77,15 @@ export default function FxChainDialog(p: {
     ;[list[i], list[i + d]] = [list[i + d], list[i]]
     p.onChange(list)
     setSel(i + d)
+  }
+  /** i の項目を j の位置へ動かす（ドラッグ） */
+  const moveTo = (i: number, j: number) => {
+    if (i === j || i + 1 === j) return
+    const list = [...p.slots]
+    const [it] = list.splice(i, 1)
+    list.splice(j > i ? j - 1 : j, 0, it)
+    p.onChange(list)
+    setSel(j > i ? j - 1 : j)
   }
   const add = (pl: FxPlugin) => {
     p.onChange([...p.slots, newSlot(pl)])
@@ -103,7 +117,44 @@ export default function FxChainDialog(p: {
                 <Box
                   key={i}
                   onClick={() => setSel(i)}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5, borderRadius: 0.5, cursor: 'pointer', bgcolor: i === index ? 'action.selected' : undefined, opacity: s.on ? 1 : 0.55 }}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move'
+                    dragRef.current = i
+                    setDragFrom(i)
+                  }}
+                  onDragOver={(e) => {
+                    if (dragRef.current === null) return
+                    e.preventDefault()
+                    const r = e.currentTarget.getBoundingClientRect()
+                    // 行の上半分なら前、下半分なら次の項目の前に落とす
+                    setDragOver(e.clientY < r.top + r.height / 2 ? i : i + 1)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    const r = e.currentTarget.getBoundingClientRect()
+                    if (dragRef.current !== null) moveTo(dragRef.current, e.clientY < r.top + r.height / 2 ? i : i + 1)
+                    dragRef.current = null
+                    setDragFrom(null)
+                    setDragOver(null)
+                  }}
+                  onDragEnd={() => {
+                    dragRef.current = null
+                    setDragFrom(null)
+                    setDragOver(null)
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 0.5,
+                    borderRadius: 0.5,
+                    cursor: 'grab',
+                    bgcolor: i === index ? 'action.selected' : undefined,
+                    opacity: dragFrom === i ? 0.4 : s.on ? 1 : 0.55,
+                    // 落とす位置に線を出す
+                    boxShadow: dragFrom !== null && dragOver === i ? (t2) => `0 -2px 0 ${t2.palette.primary.main}` : dragFrom !== null && dragOver === i + 1 && i === p.slots.length - 1 ? (t2) => `0 2px 0 ${t2.palette.primary.main}` : undefined,
+                  }}
                 >
                   <Switch size="small" checked={s.on} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { on: e.target.checked })} slotProps={{ input: { 'aria-label': t('fx.on') } }} />
                   <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
@@ -121,12 +172,15 @@ export default function FxChainDialog(p: {
                   ) : (
                     loadOf(s.plugin) !== undefined && s.on && <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{Math.round(loadOf(s.plugin)! * 100)}%</Typography>
                   )}
-                  <IconButton size="small" aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
-                    ↑
-                  </IconButton>
-                  <IconButton size="small" aria-label={t('fx.down')} disabled={i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
-                    ↓
-                  </IconButton>
+                  {/* ドラッグが使えない画面（タッチ）では、矢印で動かす */}
+                  <Box sx={{ display: 'none', '@media (pointer: coarse)': { display: 'flex' } }}>
+                    <IconButton size="small" aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
+                      ↑
+                    </IconButton>
+                    <IconButton size="small" aria-label={t('fx.down')} disabled={i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
+                      ↓
+                    </IconButton>
+                  </Box>
                   <IconButton size="small" aria-label={t('fx.remove')} onClick={(e) => stop(e, () => remove(i))}>
                     ×
                   </IconButton>
