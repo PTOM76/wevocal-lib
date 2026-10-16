@@ -47,10 +47,13 @@ const OVERLOAD_COUNT = 3
 const loaded = new WeakMap<BaseAudioContext, Map<string, Promise<boolean>>>()
 /** 読み込みが終わったもの（終わっていれば、ノードをその場で作れる。書き出しは作ったあとに足したノードを拾わないため） */
 const ready = new WeakMap<BaseAudioContext, Set<string>>()
-const moduleKey = (pkg: PluginPackage) => `${pkg.manifest.id}@${pkg.manifest.version}`
+export const moduleKey = (pkg: PluginPackage) => `${pkg.manifest.id}@${pkg.manifest.version}`
+
+/** 読み込みが終わっているか */
+export const isReady = (ctx: BaseAudioContext, key: string) => !!ready.get(ctx)?.has(key)
 
 /** processor を ctx に読み込む。失敗したら false（素通しのまま動く） */
-function loadModule(ctx: BaseAudioContext, pkg: PluginPackage): Promise<boolean> {
+export function loadModule(ctx: BaseAudioContext, pkg: PluginPackage): Promise<boolean> {
   let map = loaded.get(ctx)
   if (!map) loaded.set(ctx, (map = new Map()))
   const key = moduleKey(pkg)

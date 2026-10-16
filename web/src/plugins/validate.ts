@@ -23,7 +23,7 @@ export function validateManifest(raw: unknown): PluginManifest {
   const m = raw as Partial<PluginManifest> | null
   if (!m || typeof m !== 'object') throw new PluginError('manifest')
   if (m.api !== 1) throw new PluginError('api')
-  if (m.kind !== 'fx') throw new PluginError('kind')
+  if (m.kind !== 'fx' && m.kind !== 'instrument') throw new PluginError('kind')
   if (m.format !== 'wevocal') throw new PluginError('format')
   if (typeof m.id !== 'string' || !/^[a-z0-9][a-z0-9._-]{1,63}$/.test(m.id)) throw new PluginError('id')
   if (RESERVED.test(m.id)) throw new PluginError('reserved')
@@ -47,7 +47,7 @@ export function validateManifest(raw: unknown): PluginManifest {
   return {
     id: m.id,
     api: 1,
-    kind: 'fx',
+    kind: m.kind,
     format: 'wevocal',
     version: str(m.version, '0.0.0'),
     author: str(m.author, '?'),
