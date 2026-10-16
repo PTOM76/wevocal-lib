@@ -2,6 +2,7 @@
 import { compressorPlugin } from './compressor'
 import { delayPlugin } from './delay'
 import { filterPlugin } from './filter'
+import { distortionPlugin } from './distortion'
 import { eqPlugin } from './eq'
 import { limiterPlugin } from './limiter'
 import { reverbPlugin } from './reverb'
