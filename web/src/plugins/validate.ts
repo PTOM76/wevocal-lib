@@ -58,6 +58,7 @@ export function validateManifest(raw: unknown): PluginManifest {
     ...(m.tail ? { tail: Math.max(0, num(m.tail, 0)) } : {}),
     ...(Array.isArray(m.permissions) ? { permissions: m.permissions.map(String) } : {}),
     ...(m.sidechain ? { sidechain: true } : {}),
+    ...(m.ui ? { ui: str(m.ui) } : {}),
     ...(m.processor ? { processor: str(m.processor) } : {}),
     ...(m.wasm ? { wasm: str(m.wasm) } : {}),
     ...(m.migrate ? { migrate: m.migrate } : {}),

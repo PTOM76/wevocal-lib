@@ -37,7 +37,8 @@ export async function fetchPackage(url: string): Promise<PluginPackage> {
   if (!manifest.processor) throw new PluginError('processor')
   const processor = await (await get(new URL(manifest.processor, base))).text()
   const wasm = manifest.wasm ? await (await get(new URL(manifest.wasm, base))).arrayBuffer() : undefined
-  return { manifest, processor, wasm, source: base.href }
+  const ui = manifest.ui ? await (await get(new URL(manifest.ui, base))).text() : undefined
+  return { manifest, processor, wasm, ui, source: base.href }
 }
 
 /** 導入する（同じ id は置き換える） */
@@ -45,6 +46,7 @@ export async function installPackage(pkg: PluginPackage): Promise<void> {
   if (!store) throw new PluginError('fetch')
   const files: Record<string, string | ArrayBuffer> = { 'manifest.json': JSON.stringify(pkg.manifest), 'processor.js': pkg.processor }
   if (pkg.wasm) files['module.wasm'] = pkg.wasm
+  if (pkg.ui) files['ui.html'] = pkg.ui
   if (pkg.source) files['source.txt'] = pkg.source
   await store.put(pkg.manifest.id, files)
   await loadInstalledPlugins()
@@ -94,7 +96,8 @@ async function readInstalled(): Promise<void> {
       if (!text || !processor) continue
       const manifest = validateManifest(JSON.parse(text))
       const wasm = (await store.get(id, 'module.wasm')) ?? undefined
-      list.push(makeExternalPlugin({ manifest, processor, wasm }))
+      const ui = manifest.ui ? ((await store.getText(id, 'ui.html')) ?? undefined) : undefined
+      list.push(makeExternalPlugin({ manifest, processor, wasm, ui }))
     } catch {
       // 壊れたものは飛ばす
     }

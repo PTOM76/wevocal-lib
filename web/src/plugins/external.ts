@@ -8,6 +8,8 @@ export interface PluginPackage {
   manifest: PluginManifest
   processor: string
   wasm?: ArrayBuffer
+  /** 独自の画面の HTML */
+  ui?: string
   /** 取得元のマニフェストの URL（更新に使う） */
   source?: string
 }
@@ -173,6 +175,7 @@ export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
   return {
     manifest: pkg.manifest,
     lang: pkg.manifest.lang ?? {},
+    ui: pkg.ui,
     preload: async (ctx) => void (await loadModule(ctx, pkg)),
     create: (ctx, values, host, on = true, state) => new WorkletFx(ctx, pkg, host, state).init(values, on),
   }

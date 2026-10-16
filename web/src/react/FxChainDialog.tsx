@@ -11,6 +11,7 @@ import { EqPanel, type EqDialogKey } from './EqDialog'
 import { isOverloaded, loadOf, loadVersion, pluginsVersion, subscribeLoad, subscribePlugins } from '../plugins/registry'
 import { Choice } from './ExportDialog'
 import FxParams from './FxParams'
+import PluginUi from './PluginUi'
 
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
@@ -192,7 +193,17 @@ export default function FxChainDialog(p: {
                     />
                   </Box>
                 )}
-                <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
+                {plugin.ui ? (
+                  <PluginUi
+                    html={plugin.ui}
+                    params={plugin.manifest.params}
+                    values={values}
+                    texts={Object.fromEntries(Object.keys({ ...plugin.lang.en_us, ...plugin.lang[p.lang] }).map((k) => [k, fxText(plugin, k, p.lang)]))}
+                    onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
+                  />
+                ) : (
+                  <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
+                )}
               </>
             )}
           </Box>

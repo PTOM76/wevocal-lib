@@ -50,6 +50,7 @@ function check() {
   const code = readFileSync(procFile, 'utf-8')
   if (!code.includes(`'${processorName(manifest.id)}'`) && !code.includes(`"${processorName(manifest.id)}"`)) problems.push(`registerProcessor の名前が ${processorName(manifest.id)} ではありません`)
   for (const p of manifest.params ?? []) if (!code.includes(`'${p.id}'`) && !code.includes(`"${p.id}"`)) problems.push(`つまみ ${p.id} が processor の parameterDescriptors に見つかりません`)
+  if (manifest.ui && !existsSync(join(dir, manifest.ui))) problems.push(`ui が見つかりません: ${join(dir, manifest.ui)}`)
   const langDir = join(dir, 'lang')
   const langs = existsSync(langDir) ? readdirSync(langDir).filter((f) => f.endsWith('.json')) : []
   if (!langs.includes('en_us.json')) problems.push('lang/en_us.json がありません（ほかの言語の訳がないときに使う）')
@@ -183,6 +184,10 @@ manifest.lang = {}
 for (const f of readdirSync(langDir).filter((x) => x.endsWith('.json'))) manifest.lang[basename(f, '.json')] = readJson(join(langDir, f))
 manifest.processor = 'processor.js'
 writeFileSync(join(out, 'processor.js'), readFileSync(join(dir, 'src', 'processor.js')))
+if (manifest.ui) {
+  writeFileSync(join(out, basename(manifest.ui)), readFileSync(join(dir, manifest.ui)))
+  manifest.ui = basename(manifest.ui)
+}
 if (manifest.wasm) {
   const wasm = join(dir, manifest.wasm)
   if (!existsSync(wasm)) fail(`wasm が見つかりません: ${wasm}`)

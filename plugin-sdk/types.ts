@@ -50,6 +50,8 @@ export interface PluginManifest {
   processor?: string
   /** processor に渡す wasm の場所（任意。processorOptions.wasm で受け取る） */
   wasm?: string
+  /** 独自の画面の場所（マニフェストからの相対の HTML。iframe の sandbox の中に出す。無ければつまみから自動で作る） */
+  ui?: string
   /** 訳文（ビルドの道具が lang/ の JSON をまとめて入れる。'ja_jp' → { key: 訳 }） */
   lang?: Record<string, Record<string, string>>
 }
@@ -95,6 +97,8 @@ export interface FxPlugin {
   tail?: (values: Record<string, number>, bpm: number) => number
   /** 'ja_jp' → { key: 訳 } */
   lang: Record<string, Record<string, string>>
+  /** 独自の画面の HTML（manifest.ui を読んだもの） */
+  ui?: string
   /** 使う前に済ませる非同期の準備（processor の読み込み）。書き出しの前に呼ぶ */
   preload?: (ctx: BaseAudioContext) => Promise<void>
   create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean, state?: string): FxInstance

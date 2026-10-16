@@ -40,6 +40,10 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 | `wasm` | 任意。processor の `options.processorOptions.wasm` に ArrayBuffer で渡す |
 | `permissions` | 求める権限。導入のとき利用者に見せる（今は宣言のみ） |
 | `tail` | 余韻の秒。曲の終わりの計算に使う |
+| `latency` | 遅れ（サンプル）。遅れが違うトラックを、ホストが入口で遅らせてそろえる |
+| `realtime` | `false` なら書き出し専用。再生中は素通しで、書き出しのときだけ掛かる |
+| `sidechain` | `true` なら二つ目の入力（サイドチェーン）を持つ。利用者が、音を取るトラックを選べる |
+| `ui` | 独自の画面の HTML（無ければつまみから自動で作る）。下の「独自の画面」 |
 | `presets` | 同梱のプリセット（`name` と `values`） |
 | `migrate` | 古い `param` の id から新しい id への読み替え |
 
@@ -50,6 +54,16 @@ node plugin-sdk/scripts/wevocal-plugin.mjs build my-plugin
 - つまみは `params` の `id` と同じ名前の `AudioParam`。`parameterDescriptors` に同じ名前で定義する。値は 128 サンプルごと（長さ 1 なら一定）
 - `process` の中で確保しない。状態はプラグインの中に持つ
 - 重い処理は wasm にして、`process` から 128 サンプルにつき 1 回だけ呼ぶ
+
+- サイドチェーンを持つ processor は、`inputs[1]` を読む（何もつながっていなければ空）。`numberOfInputs` はホストが 2 にする
+- つまみ以外の状態は、`this.port.postMessage({ __wevocalState: '文字列' })` で知らせる。ホストがプロジェクトに保存し、次に作るときに `options.processorOptions.state` で渡し、ほかの場所で変わったときは `port.onmessage` の `{ __wevocalSetState: 文字列 }` で知らせる（文字列は base64 などにする）
+
+## 独自の画面
+
+マニフェストの `ui` に HTML を指定すると、FX のダイアログのつまみの代わりにその画面を出す。画面は iframe の sandbox（スクリプトだけ許可。アプリの中には触れない）の中で動き、`postMessage` でやり取りする。
+
+- 画面 → ホスト: `{ wevocal: 'ready' }`（受け取る準備ができたとき）、`{ wevocal: 'set', id, value }`（つまみを動かしたとき）
+- ホスト → 画面: `{ wevocal: 'init', params, values, texts }`（最初）、`{ wevocal: 'values', values }`（値が変わったとき）
 
 ## 安全と負荷
 
