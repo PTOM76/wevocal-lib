@@ -1,10 +1,12 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
-import { useState, useSyncExternalStore } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
 import { ContextMenu, PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
+import { presetsFromJson, presetsToJson } from '../plugins/presets'
+import { downloadBlob } from '../wav'
 import { EqPanel, type EqDialogKey } from './EqDialog'
 import { isOverloaded, loadOf, loadVersion, pluginsVersion, subscribeLoad, subscribePlugins } from '../plugins/registry'
 import FxParams from './FxParams'
@@ -13,7 +15,7 @@ import FxParams from './FxParams'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
 
 type Values = Record<string, number>
 
@@ -47,6 +49,8 @@ export default function FxChainDialog(p: {
   // 導入したプラグインの負荷と、重くて素通しにしたもの
   useSyncExternalStore(subscribeLoad, loadVersion)
   const [sel, setSel] = useState(0)
+  const importInput = useRef<HTMLInputElement>(null)
+  const [importError, setImportError] = useState(false)
   const [addAt, setAddAt] = useState<{ x: number; y: number } | null>(null)
   const index = Math.min(sel, p.slots.length - 1)
   const slot = p.slots[index] as FxSlot | undefined
@@ -136,7 +140,7 @@ export default function FxChainDialog(p: {
             )}
             {slot && plugin && plugin.manifest.id !== EQ_ID && (
               <>
-                <Box sx={{ mb: 1 }}>
+                <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                   <PresetMenu
                     params={values}
                     presets={presets}
@@ -145,6 +149,30 @@ export default function FxChainDialog(p: {
                     labels={{ button: t('fx.preset'), empty: t('fx.presetEmpty'), save: t('fx.presetSave'), remove: t('fx.presetRemove'), defaultName: (n) => t('fx.presetName', { n }) }}
                     disabled={!p.onUserPresetsChange && !builtin.length}
                   />
+                  <Button size="small" disabled={!presets.length} onClick={() => downloadBlob(new Blob([presetsToJson(plugin.manifest.id, presets)], { type: 'application/json' }), `${plugin.manifest.id}.presets.json`)}>
+                    {t('fx.presetExport')}
+                  </Button>
+                  <Button size="small" disabled={!p.onUserPresetsChange} onClick={() => importInput.current?.click()}>
+                    {t('fx.presetImport')}
+                  </Button>
+                  <input
+                    ref={importInput}
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ''
+                      if (!file) return
+                      void file.text().then((text) => {
+                        const list = presetsFromJson(text, plugin.manifest.id)
+                        setImportError(!list)
+                        // 同じ名前は置き換える
+                        if (list) p.onUserPresetsChange?.(plugin.manifest.id, [...(p.userPresets?.[plugin.manifest.id] ?? []).filter((x) => !list.some((y) => y.name === x.name)), ...list])
+                      })
+                    }}
+                  />
+                  {importError && <Typography sx={{ fontSize: pevenFont('sm'), color: 'error.main' }}>{t('fx.presetImportError')}</Typography>}
                 </Box>
                 <FxParams plugin={plugin} values={values} lang={p.lang} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)} />
               </>

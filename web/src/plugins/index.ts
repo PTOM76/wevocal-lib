@@ -3,6 +3,7 @@ export type { FxInstance, FxPlugin, FxSlot, HostInfo, ParamDef, PluginManifest }
 export { STANDARD_PLUGINS, DEV_PLUGINS, availablePlugins, preloadFx, findPlugin, defaultValues, migrateValues, newSlot, missingPlugins, isNeutralChain, fxText, chainTail, createFxChain, type FxChain } from './host'
 export { installedPlugins, subscribePlugins, pluginsVersion, loadOf, isOverloaded } from './registry'
 export { fetchPackage, installPackage, removePlugin, updatePlugin, pluginSource, setPluginStore, loadInstalledPlugins, whenPluginsLoaded, type PluginStore } from './store'
+export { presetsToJson, presetsFromJson, type PresetItem } from './presets'
 export { startRenderLoad } from './renderLoad'
 export { PluginError, validateManifest, type PluginErrorCode } from './validate'
 export type { PluginPackage } from './external'
