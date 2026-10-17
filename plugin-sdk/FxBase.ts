@@ -20,6 +20,9 @@ export abstract class FxBase implements FxInstance {
   private readonly bypass: GainNode
   private readonly tracked: AudioNode[] = []
   private values: Record<string, number> = {}
+  /** 今のオンオフ（同じなら書き込まない）と、オフにしたあと中のノードを外すタイマー */
+  private on: boolean | null = null
+  private offTimer: ReturnType<typeof setTimeout> | null = null
   /** 作った直後の値は、ならさずにそのまま入れる（track したノードのつまみの setTargetAtTime を、この間だけ setValueAtTime にする） */
   private warm = false
 
@@ -58,19 +61,49 @@ export abstract class FxBase implements FxInstance {
 
   update(values: Record<string, number>): void {
     const v: Record<string, number> = {}
-    for (const p of this.manifest.params) v[p.id] = clampParam(p, values[p.id] ?? this.values[p.id] ?? p.default)
+    // テンポに合わせる FX（ディレイ）があるので、テンポが変わったときも書き込む
+    const bpm = this.host.bpm()
+    let same = Object.keys(this.values).length > 0 && bpm === this.bpm
+    this.bpm = bpm
+    for (const p of this.manifest.params) {
+      v[p.id] = clampParam(p, values[p.id] ?? this.values[p.id] ?? p.default)
+      if (v[p.id] !== this.values[p.id]) same = false
+    }
+    // 同じ値なら書き込まない（オートメーションと再生中の編集で毎回呼ばれ、つまみの予定が溜まるため）
+    if (same) return
     this.values = v
     this.apply(v, this.ctx.currentTime)
   }
 
   setOn(on: boolean, immediate = false): void {
+    if (on === this.on && !immediate) return
+    this.on = on
     const now = this.ctx.currentTime
     const set = (g: GainNode, x: number) => (immediate ? (g.gain.value = x) : g.gain.setTargetAtTime(x, now, SMOOTH))
+    if (this.offTimer) clearTimeout(this.offTimer)
+    this.offTimer = null
+    // オフの間は中のノードに音を流さない（流すと、素通しにしていても処理し続けて重い）。オンにするときはつなぎ直してから上げる
+    if (on) this.attachSrc(true)
     set(this.src, on ? 1 : 0)
     set(this.bypass, on ? 0 : 1)
+    if (!on) {
+      // 書き出し（OfflineAudioContext）は時計が速いので、すぐ外す。再生は下げ終わってから外す
+      if (immediate || !(this.ctx instanceof AudioContext)) this.attachSrc(false)
+      else this.offTimer = setTimeout(() => this.attachSrc(false), SMOOTH * 8 * 1000)
+    }
+  }
+
+  private bpm = 0
+  private srcAttached = true
+  private attachSrc(on: boolean) {
+    if (on === this.srcAttached) return
+    this.srcAttached = on
+    if (on) this.input.connect(this.src)
+    else this.input.disconnect(this.src)
   }
 
   dispose(): void {
+    if (this.offTimer) clearTimeout(this.offTimer)
     for (const n of this.tracked) {
       n.disconnect()
       // 鳴らし始めた音源（LFO など）は止める（外しただけでは動き続け、再生のたびに溜まる）
