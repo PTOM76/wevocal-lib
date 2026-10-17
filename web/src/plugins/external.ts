@@ -17,6 +17,8 @@ export interface PluginPackage {
   ui?: string
   /** 取得元のマニフェストの URL（更新に使う） */
   source?: string
+  /** VST の重さの目安（導入の確認の表示用。保存しない）。処理にかかる時間 ÷ 音の長さ。1 を超えると再生に間に合わない */
+  load?: number
 }
 
 /**

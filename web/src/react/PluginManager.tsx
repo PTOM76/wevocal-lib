@@ -8,7 +8,7 @@ import { fetchPackage, fxText, installPackage, installedInstruments, installedPl
 export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
   | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
-  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.wam' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.vst.warning' | 'plugins.vst.load' | 'plugins.vst.loadHeavy' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.wam' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
 
 /** エラーを画面の文にする（VST の読み込みの失敗は、理由の詳細を添える） */
 function errorText(t: (key: PluginManagerKey) => string, e: unknown) {
@@ -135,6 +135,13 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
               <Typography sx={{ fontSize: pevenFont('base') }}>
                 {t('plugins.permissions')}: {pm.permissions?.length ? pm.permissions.join(', ') : t('plugins.permissionsNone')}
               </Typography>
+              {/* VST: 動かないかもしれない注意と、重さの目安 */}
+              {pm.format === 'vst' && <Typography sx={{ fontSize: pevenFont('sm'), color: 'warning.main', mt: 1 }}>{t('plugins.vst.warning')}</Typography>}
+              {pm.format === 'vst' && pending?.load !== undefined && (
+                <Typography sx={{ fontSize: pevenFont('sm'), color: pending.load >= 1 ? 'warning.main' : 'text.secondary' }}>
+                  {t(pending.load >= 1 ? 'plugins.vst.loadHeavy' : 'plugins.vst.load', { n: Math.max(1, Math.round(pending.load * 100)) })}
+                </Typography>
+              )}
               {installedPlugins().some((x) => x.manifest.id === pm.id) && <Typography sx={{ fontSize: pevenFont('sm'), color: 'warning.main' }}>{t('plugins.replace')}</Typography>}
               <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary', mt: 1 }}>{t('plugins.notice')}</Typography>
             </Box>

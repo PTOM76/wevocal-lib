@@ -73,6 +73,17 @@ registerProcessor('${name}', VstProcessor)
 `
 }
 
+/** 重さを量る。雑音を 128 サンプルずつ通し、処理にかかった時間 ÷ 音の長さを返す（48 kHz とみなす。始めの数回は除く） */
+function measureLoad(vst: JsVst): number {
+  const n = 128
+  const chans = Array.from({ length: Math.max(1, vst.numInputs) }, () => Float32Array.from({ length: n }, () => Math.random() * 0.2 - 0.1))
+  for (let i = 0; i < 8; i++) vst.process(chans, n)
+  const blocks = 96
+  const t0 = performance.now()
+  for (let i = 0; i < blocks; i++) vst.process(chans, n)
+  return (performance.now() - t0) / 1000 / ((blocks * n) / 48000)
+}
+
 /**
  * DLL からパッケージを作る。DLL でなかった、読み込めなかったときは PluginError('manifest')。
  * 導入するとき 1 回だけ呼ぶ（つまみの数と名前は DLL ごとに違うので、ここで調べて manifest に固定する）
@@ -113,7 +124,14 @@ export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<Pl
       processor: 'processor.js',
       lang,
     }
-    return { manifest, processor: makeProcessor(id, params.map((p) => p.id), params.map((p) => p.default)), wasm, dll }
+    // 量れなかったとき（処理で落ちる）は目安を出さない
+    let load: number | undefined
+    try {
+      load = measureLoad(vst)
+    } catch {
+      load = undefined
+    }
+    return { manifest, processor: makeProcessor(id, params.map((p) => p.id), params.map((p) => p.default)), wasm, dll, load }
   } finally {
     vst.free()
   }
