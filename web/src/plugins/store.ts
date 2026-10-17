@@ -5,6 +5,7 @@ import { setInstalledPlugins } from './registry'
 import { setInstalledTools, type ToolPlugin } from './tools'
 import { setInstalledInstruments, type InstrumentPlugin } from './instruments'
 import { PluginError, validateManifest } from './validate'
+import { refreshVstPackage } from './vst'
 import type { FxPlugin } from '../../../plugin-sdk'
 
 /** プラグインの置き場（PevenMUI の PackageStore と同じ形。wevocal-lib の本体は PevenMUI に依存しないので、アプリが setPluginStore で渡す） */
@@ -110,7 +111,8 @@ async function readInstalled(): Promise<void> {
       const wasm = (await store.get(id, 'module.wasm')) ?? undefined
       const dll = (await store.get(id, 'plugin.dll')) ?? undefined
       const ui = manifest.ui ? ((await store.getText(id, 'ui.html')) ?? undefined) : undefined
-      const pkg = { manifest, processor: processor ?? '', wasm, dll, ui }
+      const saved = { manifest, processor: processor ?? '', wasm, dll, ui }
+      const pkg = manifest.format === 'vst' ? await refreshVstPackage(saved) : saved
       if (manifest.kind === 'tool' || manifest.kind === 'analyzer') tools.push({ manifest, lang: manifest.lang ?? {}, pkg })
       else if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
       else list.push(makeExternalPlugin(pkg))

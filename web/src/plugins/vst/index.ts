@@ -52,7 +52,16 @@ class VstProcessor extends AudioWorkletProcessor {
     const n = out[0].length
     const chans = []
     for (let c = 0; c < this.vst.numInputs; c++) chans.push(inp[c] ?? inp[0] ?? new Float32Array(n))
-    const res = this.vst.process(chans, n)
+    // エミュレーターが止まったら（対応していない命令など）、例外で processor ごと無音にならないよう、以後は素通しにする
+    let res
+    try {
+      res = this.vst.process(chans, n)
+    } catch (e) {
+      this.failed = true
+      this.port.postMessage({ __wevocalError: String(e) })
+      for (let c = 0; c < out.length; c++) if (inp[c]) out[c].set(inp[c])
+      return true
+    }
     // 出力に NaN や inf が混ざったら、そのブロックは 0 にして、以後は素通しにする（暴走したプラグインが音を壊し続けないように）
     let bad = false
     for (let c = 0; c < out.length && !bad; c++) {
@@ -71,6 +80,12 @@ class VstProcessor extends AudioWorkletProcessor {
 }
 registerProcessor('${name}', VstProcessor)
 `
+}
+
+/** 導入済みの VST の processor と wasm を今のものにする（導入したときの古いエミュレーターのままにしない） */
+export async function refreshVstPackage(pkg: PluginPackage): Promise<PluginPackage> {
+  const params = pkg.manifest.params
+  return { ...pkg, wasm: await loadBridge(), processor: makeProcessor(pkg.manifest.id, params.map((p) => p.id), params.map((p) => p.default)) }
 }
 
 /** 重さを量る。雑音を 128 サンプルずつ通し、処理にかかった時間 ÷ 音の長さを返す（48 kHz とみなす。始めの数回は除く） */

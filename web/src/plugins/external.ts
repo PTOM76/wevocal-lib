@@ -146,6 +146,8 @@ class WorkletFx extends FxBase {
       // 処理時間の報告は再生中の AudioContext だけ見る（書き出しは速く進むので、時間の割合に意味がない）
       if (this.ctx instanceof AudioContext) this.onLoad(e.data?.__wevocalLoad)
       if (typeof e.data?.__wevocalState === 'string') this.host.onState?.(e.data.__wevocalState)
+      // processor の中で止まった理由（VST の対応していない命令など）。素通しになっている
+      if (e.data?.__wevocalError) console.warn(`plugin ${this.pkg.manifest.id}:`, e.data.__wevocalError)
     }
     this.src.connect(node).connect(this.dst)
     this.apply(this.latest, this.ctx.currentTime)
