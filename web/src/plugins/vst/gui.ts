@@ -33,7 +33,7 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  Object.assign(canvas.style, { display: 'block', margin: '0 auto', maxWidth: '100%', touchAction: 'none', userSelect: 'none' })
+  Object.assign(canvas.style, { display: 'block', margin: '0 auto', width: `${w}px`, height: `${h}px`, touchAction: 'none', userSelect: 'none' })
   const g = canvas.getContext('2d')!
   el.appendChild(canvas)
 
@@ -87,6 +87,13 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
   }, FRAME_MS)
 
   return {
+    size: [w, h],
+    setScale(s) {
+      // 拡大してもドットがぼやけないようにする
+      canvas.style.imageRendering = s >= 1.5 ? 'pixelated' : 'auto'
+      canvas.style.width = `${Math.round(w * s)}px`
+      canvas.style.height = `${Math.round(h * s)}px`
+    },
     update(v) {
       // ホスト側で変わったぶん（リセット、オートメーション、プリセット）だけ画面のつまみへ渡す
       safe(() =>

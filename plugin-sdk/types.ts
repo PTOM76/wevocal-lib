@@ -109,6 +109,10 @@ export interface GuiHandle {
   /** ホスト側で値が変わった */
   update(values: Record<string, number>): void
   dispose(): void
+  /** 画面のもとの大きさ（px）。あれば、ホストが拡大率を変えられる（setScale） */
+  size?: [number, number]
+  /** 拡大率を変える（1 でもとの大きさ） */
+  setScale?(scale: number): void
 }
 
 /** 標準のプラグインの中身（今はノードを組む形） */

@@ -19,7 +19,7 @@ import PluginGui from './PluginGui'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError' | 'fx.guiNative' | 'fx.guiStandard'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError' | 'fx.guiNative' | 'fx.guiStandard' | 'fx.guiZoomAuto' | 'fx.guiZoomIn' | 'fx.guiZoomOut'
 
 type Values = Record<string, number>
 
@@ -311,6 +311,7 @@ export default function FxChainDialog(p: {
                       plugin={plugin}
                       values={values}
                       standard={!!standard[plugin.manifest.id]}
+                      zoomLabels={{ auto: t('fx.guiZoomAuto'), zoomIn: t('fx.guiZoomIn'), zoomOut: t('fx.guiZoomOut') }}
                       state={slot.state}
                       onState={(st) => patch(index, { state: st }, `fx:${index}:state`)}
                       onAvailable={(ok) => ok || setNoGui((m) => ({ ...m, [plugin.manifest.id]: true }))}
