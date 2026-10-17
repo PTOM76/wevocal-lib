@@ -1,6 +1,6 @@
 // VST の DLL を、WeVocal の FX プラグインのパッケージにする（試験的機能。実行環境は wevocal-vstbridge の wasm エミュレーター）。
 // DLL を一度読み込んでつまみの数と名前を調べ、manifest と processor を作る。processor は AudioWorklet の中でエミュレーターを動かす。
-// 書き出し専用（realtime: false）: エミュレーターは再生に間に合わないので、再生中は素通しにし、書き出しで掛ける
+// 書き出し専用（realtime: false）: エミュレーターは再生に間に合わないので、再生中は素通しにする。書き出しで掛け、再生中は先に計算して鳴らす（Studio の設定の「先に計算する」。anticipative は既定の true のまま）
 import { PluginError } from '../validate'
 import type { PluginPackage } from '../external'
 import type { PluginManifest } from '../../../../plugin-sdk'
@@ -120,7 +120,6 @@ export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<Pl
       author: 'VST',
       name: 'name',
       realtime: false,
-      anticipative: false,
       permissions: [],
       params,
       processor: 'processor.js',
