@@ -79,6 +79,8 @@ export interface FxChain {
   output: AudioNode
   /** 同じ並びなら値だけを変える。並びや数が変わったら作り直す（input と output は同じまま） */
   update(slots: FxSlot[]): void
+  /** デバッグ表示に出す、項目ごとの「プラグインの id 状態」（入っていない、書き出し専用で素通しのものは pass） */
+  describe(): string[]
   dispose(): void
 }
 
@@ -98,6 +100,8 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
   const output = ctx.createGain()
   let current: (FxInstance | null)[] = []
   let key = ''
+  /** 項目のプラグインの id（デバッグ表示） */
+  let shapeIds: string[] = []
   /** サイドチェーンにつないだ音（項目ごと。つなぎ直すときに外す） */
   let scTaps: ({ from: AudioNode; to: AudioNode } | null)[] = []
   let scSources: (string | undefined)[] = []
@@ -134,6 +138,7 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
     }
     last.connect(output)
     key = shape(list)
+    shapeIds = list.map((s) => s.plugin)
   }
   const free = () => {
     for (const t of scTaps) t && t.from.disconnect(t.to)
@@ -161,6 +166,7 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
         if (list[i].sidechain !== scSources[i] || (list[i].sidechain && !scTaps[i])) connectSidechain(i, list[i].sidechain)
       }
     },
+    describe: () => current.map((n, i) => `${shapeIds[i] ?? '?'} ${n ? (n.status?.() ?? 'on') : 'pass'}`),
     dispose() {
       free()
       input.disconnect()

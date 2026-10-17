@@ -51,6 +51,11 @@ export function setOverloaded(id: string, on: boolean) {
   notifyLoad()
 }
 
+/** 再生の AudioContext で動いている processor（外から足した FX と音源）の数。止め忘れて溜まっていないかをデバッグ表示で見る */
+let processors = 0
+export const liveProcessors = () => processors
+export const countProcessor = (d: number) => void (processors += d)
+
 export function subscribeLoad(l: () => void) {
   loadListeners.add(l)
   return () => void loadListeners.delete(l)

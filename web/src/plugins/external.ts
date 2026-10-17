@@ -1,6 +1,6 @@
 // 外から足したプラグイン（processor 方式）。AudioWorklet のモジュールを読み込み、つまみは AudioParam として渡す
 import { FxBase, SMOOTH } from '../../../plugin-sdk/FxBase'
-import { reportLoad, setOverloaded } from './registry'
+import { countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
 import { mountVstGui } from './vst/gui'
 import { processorName, type FxPlugin, type HostInfo, type PluginManifest } from '../../../plugin-sdk'
 
@@ -141,6 +141,7 @@ class WorkletFx extends FxBase {
       processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state },
     })
     this.node = node
+    if (this.ctx instanceof AudioContext) countProcessor(1)
     if (this.sidechainIn) this.sidechainIn.connect(node, 0, 1)
     node.port.onmessage = (e) => {
       // 処理時間の報告は再生中の AudioContext だけ見る（書き出しは速く進むので、時間の割合に意味がない）
@@ -157,6 +158,13 @@ class WorkletFx extends FxBase {
     if (state === this.state) return
     this.state = state
     this.node?.port.postMessage({ __wevocalSetState: state })
+  }
+
+  status(): string {
+    if (this.waiting) return 'loading'
+    if (this.overloaded) return 'overloaded'
+    const load = loadOf(this.pkg.manifest.id)
+    return super.status() + (load !== undefined ? ` ${Math.round(load * 100)}%` : '')
   }
 
   private onLoad(ratio: unknown) {
@@ -195,6 +203,7 @@ class WorkletFx extends FxBase {
 
   dispose() {
     this.disposed = true
+    if (this.node && this.ctx instanceof AudioContext) countProcessor(-1)
     this.node?.port.postMessage({ __wevocalDispose: true })
     this.node?.disconnect()
     super.dispose()

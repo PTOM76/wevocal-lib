@@ -88,6 +88,8 @@ export interface FxInstance {
   setState?(state: string | undefined): void
   /** オフは素通し（ノードは残す） */
   setOn(on: boolean): void
+  /** デバッグ表示に出す今の状態（on、off など。読んだときだけ作る） */
+  status?(): string
   dispose(): void
 }
 

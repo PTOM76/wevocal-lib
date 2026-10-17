@@ -1,5 +1,5 @@
 // 音源のプラグイン（kind: 'instrument'）。MIDI の音符を鳴らして音にする。標準のシンセとサンプラー（processor 方式。外から足すものと同じ仕組み）と、音符の送り方
-import { reportLoad, setOverloaded } from './registry'
+import { countProcessor, reportLoad, setOverloaded } from './registry'
 import { loadModule, moduleKey, isReady, type PluginPackage } from './external'
 import { processorName, type PluginManifest } from '../../../plugin-sdk'
 
@@ -307,6 +307,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
   let overloaded = false
 
   const attach = () => {
+    if (ctx instanceof AudioContext) countProcessor(1)
     node = new AudioWorkletNode(ctx, processorName(pkg.manifest.id), {
       numberOfInputs: 0,
       numberOfOutputs: 1,
@@ -358,6 +359,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
     setSample: (s) => s && send({ __wevocalSample: { channels: s.channels, sampleRate: s.sampleRate } }),
     dispose: () => {
       disposed = true
+      if (node && ctx instanceof AudioContext) countProcessor(-1)
       // processor を止める（external.ts の殻。外しただけでは動き続ける）
       node?.port.postMessage({ __wevocalDispose: true })
       node?.disconnect()

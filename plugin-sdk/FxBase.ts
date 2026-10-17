@@ -95,6 +95,11 @@ export abstract class FxBase implements FxInstance {
 
   private bpm = 0
   private srcAttached = true
+
+  /** デバッグ表示の状態。オフで下げている途中は fading（まだ処理している） */
+  status(): string {
+    return this.on ? 'on' : this.srcAttached ? 'fading' : 'off'
+  }
   private attachSrc(on: boolean) {
     if (on === this.srcAttached) return
     this.srcAttached = on
