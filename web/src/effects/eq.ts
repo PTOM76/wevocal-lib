@@ -118,6 +118,8 @@ export interface LiveEq {
   input: GainNode
   output: GainNode
   bands: BiquadFilterNode[]
+  /** 帯ごとに最後に入れた値（同じ値は書き込まない。再生中の同期のたびに呼ばれ、つまみの予定が溜まるため） */
+  last?: number[]
 }
 
 const liveGains = (eq: TrackEq) => (eq.on ? eq.gains : eq.gains.map(() => 0))
@@ -150,10 +152,17 @@ export function updateLiveEq(n: LiveEq, eq: TrackEq) {
     n.input.disconnect()
     for (const b of n.bands) b.disconnect()
     connectBands(n, eq)
+    n.last = undefined
     return
   }
   const t = n.input.context.currentTime
-  for (const [i, g] of liveGains(eq).entries()) n.bands[i].gain.setTargetAtTime(g, t, 0.01)
+  const gains = liveGains(eq)
+  const last = (n.last ??= n.bands.map((b) => b.gain.value))
+  for (const [i, g] of gains.entries()) {
+    if (last[i] === g) continue
+    last[i] = g
+    n.bands[i].gain.setTargetAtTime(g, t, 0.01)
+  }
 }
 
 export function disconnectLiveEq(n: LiveEq) {
