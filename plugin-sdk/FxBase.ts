@@ -105,6 +105,14 @@ export abstract class FxBase implements FxInstance {
     this.srcAttached = on
     if (on) this.input.connect(this.src)
     else this.input.disconnect(this.src)
+    this.attached(on)
+  }
+
+  /** 中のノードに音を流し始めた、やめた（processor の FX は、やめている間は処理も止める） */
+  protected attached(_on: boolean): void {}
+  /** 中のノードに音を流しているか */
+  protected get flowing(): boolean {
+    return this.srcAttached
   }
 
   dispose(): void {

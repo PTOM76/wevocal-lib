@@ -24,7 +24,8 @@ export interface PluginPackage {
 /**
  * processor の前に付ける測定の殻。registerProcessor を包み、process の時間を 128 サンプルの時間に対する割合として、約 1 秒ごとに port で知らせる
  * （AudioWorklet には細かい時計がないので、Date.now() の差を足し合わせて平均を取る）。
- * __wevocalDispose を受け取ったら process で false を返して止める（外しただけでは true を返す processor が動き続け、再生のたびに溜まって重くなる）
+ * __wevocalDispose を受け取ったら process で false を返して止める（外しただけでは true を返す processor が動き続け、再生のたびに溜まって重くなる）。
+ * __wevocalPause の間は process を呼ばない（オフの FX が処理し続けて、ほかの音が間に合わなくなるため）
  */
 const MEASURE = `;(() => {
   const reg = registerProcessor
@@ -34,6 +35,7 @@ const MEASURE = `;(() => {
     let n = 0
     cls.prototype.process = function (i, o, p) {
       if (this.__wevocalGone) return false
+      if (this.__wevocalPaused) return true
       const t = Date.now()
       const r = run.call(this, i, o, p)
       total += Date.now() - t
@@ -49,6 +51,7 @@ const MEASURE = `;(() => {
         super(o)
         this.port.addEventListener('message', (e) => {
           if (e.data && e.data.__wevocalDispose) this.__wevocalGone = true
+          if (e.data && typeof e.data.__wevocalPause === 'boolean') this.__wevocalPaused = e.data.__wevocalPause
         })
         this.port.start()
       }
@@ -151,7 +154,13 @@ class WorkletFx extends FxBase {
       if (e.data?.__wevocalError) console.warn(`plugin ${this.pkg.manifest.id}:`, e.data.__wevocalError)
     }
     this.src.connect(node).connect(this.dst)
+    // 読み込みを待つ間にオフのままになっていれば、作った processor も止めておく
+    if (!this.flowing) this.attached(false)
     this.apply(this.latest, this.ctx.currentTime)
+  }
+
+  protected attached(on: boolean) {
+    this.node?.port.postMessage({ __wevocalPause: !on })
   }
 
   setState(state: string | undefined) {
