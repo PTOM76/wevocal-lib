@@ -45,8 +45,26 @@ function rng(seed: number) {
   }
 }
 
-/** ステレオの、指数で減衰する雑音。時間とともに高域を落とす（-60 dB で終わる） */
+/** 作った IR（AudioContext ごと。再生位置を変えるたびに FX を組み直しても、計算し直さない） */
+const impulses = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>()
+
+/** IR を作る（同じ種類と大きさなら使いまわす）。IR は読むだけなので、いくつのリバーブで共有してもよい */
 export function makeImpulse(ctx: BaseAudioContext, type: number, size: number): AudioBuffer {
+  let m = impulses.get(ctx)
+  if (!m) impulses.set(ctx, (m = new Map()))
+  const key = `${type}:${size}`
+  let buf = m.get(key)
+  if (!buf) {
+    buf = computeImpulse(ctx, type, size)
+    // つまみを動かして増える分は古いものから捨てる（IR は最大 4 秒のステレオ）
+    if (m.size >= 8) m.delete(m.keys().next().value!)
+    m.set(key, buf)
+  }
+  return buf
+}
+
+/** ステレオの、指数で減衰する雑音。時間とともに高域を落とす（-60 dB で終わる） */
+function computeImpulse(ctx: BaseAudioContext, type: number, size: number): AudioBuffer {
   const len = irSeconds(type, size)
   const frames = Math.floor(len * ctx.sampleRate)
   const buf = ctx.createBuffer(2, frames, ctx.sampleRate)
