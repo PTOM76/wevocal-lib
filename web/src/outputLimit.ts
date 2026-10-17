@@ -24,7 +24,22 @@ export function setOutputLimit(db: number | null) {
   }
 }
 
-/** この AudioContext の出口（リミッターを通して destination へ） */
+/**
+ * 再生ごとの出口（リミッターを通して destination へ）。使い終わったら disconnect する。
+ * 再生ごとに作り直すので、どこかで壊れた値（NaN）が一度入っても、次の再生には残らない
+ */
+export function createLimitedOutput(ctx: AudioContext): AudioNode {
+  const n = ctx.createDynamicsCompressor()
+  n.knee.value = 0
+  n.attack.value = 0.001
+  n.release.value = 0.1
+  apply(n)
+  n.connect(ctx.destination)
+  all.add(new WeakRef(n))
+  return n
+}
+
+/** この AudioContext の出口（リミッターを通して destination へ。AudioContext ごとに 1 つ） */
 export function limitedOutput(ctx: AudioContext): AudioNode {
   let n = limiters.get(ctx)
   if (!n) {

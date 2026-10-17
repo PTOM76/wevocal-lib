@@ -19,7 +19,7 @@ export * from './effects/fader'
 export { DEFAULT_SILENCE, findSounds, type SilenceOptions } from './silence'
 export { tempoSegments, segmentAt, bpmAt, beatsIn, nearestBeat, stepBeat, type TempoSegment, type Beat, type BaseTempo, type TempoMarker } from './tempoMap'
 export { toFrames, GAIN_RAMP_SEC, mapGain, gainRange, fadeRange, normalizeRange, finishClip, type FinishOptions } from './clipEdit'
-export { setOutputLimit, limitedOutput } from './outputLimit'
+export { setOutputLimit, limitedOutput, createLimitedOutput } from './outputLimit'
 // WeVocal プラグイン（FX の列。型と基底クラスは plugin-sdk/）
 export * from './plugins'
 export { fxEffect, applyFx } from './plugins/fxEffect'

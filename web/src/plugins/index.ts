@@ -1,7 +1,7 @@
 // WeVocal プラグインの窓口（ホストと標準のプラグイン）
 export type { AutoPoint, FxInstance, FxPlugin, FxSlot, GuiHandle, GuiState, HostInfo, ParamDef, PluginManifest } from '../../../plugin-sdk'
 export { STANDARD_PLUGINS, DEV_PLUGINS, availablePlugins, preloadFx, findPlugin, defaultValues, migrateValues, newSlot, missingPlugins, isNeutralChain, fxText, fxDescription, chainTail, chainLatency, createFxChain, type FxChain, type ChainOptions } from './host'
-export { installedPlugins, subscribePlugins, pluginsVersion, loadOf, isOverloaded, liveProcessors } from './registry'
+export { installedPlugins, subscribePlugins, pluginsVersion, loadOf, isOverloaded, liveProcessors, renderLoad } from './registry'
 export { fetchPackage, installPackage, removePlugin, updatePlugin, pluginSource, setPluginStore, loadInstalledPlugins, whenPluginsLoaded, type PluginStore } from './store'
 export { STANDARD_INSTRUMENTS, installedInstruments, availableInstruments, findInstrument, preloadInstruments, createInstrument, type InstrumentPlugin, type InstrumentInstance, type NoteEvent, type SampleData } from './instruments'
 export { availableTools, findTool, installedTools, runTool, type ToolPlugin, type ToolInput, type ToolResult, type ToolRow } from './tools'

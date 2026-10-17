@@ -56,6 +56,48 @@ let processors = 0
 export const liveProcessors = () => processors
 export const countProcessor = (d: number) => void (processors += d)
 
+/** 測った値を消す（止めたとき。止める前の値が残って、まだ重いように見えないように） */
+export function clearLoad(id: string) {
+  if (loads.delete(id)) notifyLoad()
+}
+
+// --- 全体の負荷（ブラウザが測る AudioContext の負荷）で守る。プラグインごとの値は推定なので、素通しにするかは全体の負荷で決める ---
+
+/** 全体の負荷で素通しにできる processor（再生の AudioContext の FX） */
+export interface LoadGuard {
+  /** 推定の負荷（どれを止めるかを選ぶためだけに使う）。測れていなければ undefined */
+  load(): number | undefined
+  /** 今処理しているか */
+  active(): boolean
+  /** 重すぎるので素通しにする */
+  bypass(): void
+}
+const guards = new Set<LoadGuard>()
+export const addLoadGuard = (g: LoadGuard) => {
+  guards.add(g)
+  return () => void guards.delete(g)
+}
+
+/** 全体の負荷がこれを超える報告が TOTAL_COUNT 回続いたら、一番重い processor を素通しにする（その processor が SHARE 以上を使っているときだけ。ほかが原因なら止めても軽くならない） */
+const SHARE = 0.2
+const TOTAL_LIMIT = 0.9
+const TOTAL_COUNT = 2
+let totalLoad: number | undefined
+let totalStreak = 0
+/** ブラウザが測った全体の負荷（0〜1）。測れないブラウザでは undefined */
+export const renderLoad = () => totalLoad
+
+export function reportTotalLoad(load: number) {
+  totalLoad = load
+  totalStreak = load > TOTAL_LIMIT ? totalStreak + 1 : 0
+  if (totalStreak >= TOTAL_COUNT) {
+    totalStreak = 0
+    const heaviest = [...guards].filter((g) => g.active() && (g.load() ?? 0) >= SHARE).sort((a, b) => b.load()! - a.load()!)[0]
+    heaviest?.bypass()
+  }
+  notifyLoad()
+}
+
 export function subscribeLoad(l: () => void) {
   loadListeners.add(l)
   return () => void loadListeners.delete(l)

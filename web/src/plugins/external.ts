@@ -1,6 +1,6 @@
 // 外から足したプラグイン（processor 方式）。AudioWorklet のモジュールを読み込み、つまみは AudioParam として渡す
 import { FxBase, SMOOTH } from '../../../plugin-sdk/FxBase'
-import { countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
+import { addLoadGuard, clearLoad, countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
 import { mountVstGui } from './vst/gui'
 import { processorName, type FxPlugin, type HostInfo, type PluginManifest } from '../../../plugin-sdk'
 
@@ -110,6 +110,9 @@ class WorkletFx extends FxBase {
   private streak = 0
   /** つまみの値を一度入れたか（最初は、ならさずにそのまま入れる） */
   private applied = false
+  /** この processor の最後に測った負荷（全体の負荷で止めるものを選ぶ） */
+  private lastLoad: number | undefined
+  private dropGuard: (() => void) | null = null
 
   private readonly pkg: PluginPackage
 
@@ -144,7 +147,10 @@ class WorkletFx extends FxBase {
       processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state },
     })
     this.node = node
-    if (this.ctx instanceof AudioContext) countProcessor(1)
+    if (this.ctx instanceof AudioContext) {
+      countProcessor(1)
+      this.dropGuard = addLoadGuard({ load: () => this.lastLoad, active: () => this.flowing && !this.overloaded, bypass: () => this.overload() })
+    }
     if (this.sidechainIn) this.sidechainIn.connect(node, 0, 1)
     node.port.onmessage = (e) => {
       // 処理時間の報告は再生中の AudioContext だけ見る（書き出しは速く進むので、時間の割合に意味がない）
@@ -161,6 +167,11 @@ class WorkletFx extends FxBase {
 
   protected attached(on: boolean) {
     this.node?.port.postMessage({ __wevocalPause: !on })
+    // 止めている間は測らないので、前の値を消す
+    if (!on) {
+      this.lastLoad = undefined
+      clearLoad(this.pkg.manifest.id)
+    }
   }
 
   setState(state: string | undefined) {
@@ -177,15 +188,20 @@ class WorkletFx extends FxBase {
   }
 
   private onLoad(ratio: unknown) {
-    if (typeof ratio !== 'number') return
+    if (typeof ratio !== 'number' || !this.flowing) return
+    this.lastLoad = ratio
     reportLoad(this.pkg.manifest.id, ratio)
+    // 全体の負荷を測れないブラウザでは、このプラグインだけで間に合わないときに素通しにする
     this.streak = ratio > OVERLOAD ? this.streak + 1 : 0
-    if (this.streak >= OVERLOAD_COUNT && !this.overloaded) {
-      // 音が途切れ続けるのを避けるため、自動で素通しにする。オフにしてからオンにし直すと、また試す
-      this.overloaded = true
-      setOverloaded(this.pkg.manifest.id, true)
-      super.setOn(false)
-    }
+    if (this.streak >= OVERLOAD_COUNT) this.overload()
+  }
+
+  /** 音が途切れ続けるのを避けるため、自動で素通しにする。オフにしてからオンにし直すと、また試す */
+  private overload() {
+    if (this.overloaded) return
+    this.overloaded = true
+    setOverloaded(this.pkg.manifest.id, true)
+    super.setOn(false)
   }
 
   setOn(on: boolean, immediate = false) {
@@ -213,6 +229,7 @@ class WorkletFx extends FxBase {
   dispose() {
     this.disposed = true
     if (this.node && this.ctx instanceof AudioContext) countProcessor(-1)
+    this.dropGuard?.()
     this.node?.port.postMessage({ __wevocalDispose: true })
     this.node?.disconnect()
     super.dispose()
