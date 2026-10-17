@@ -358,6 +358,8 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
     setSample: (s) => s && send({ __wevocalSample: { channels: s.channels, sampleRate: s.sampleRate } }),
     dispose: () => {
       disposed = true
+      // processor を止める（external.ts の殻。外しただけでは動き続ける）
+      node?.port.postMessage({ __wevocalDispose: true })
       node?.disconnect()
       out.disconnect()
     },

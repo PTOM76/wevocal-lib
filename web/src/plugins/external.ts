@@ -21,7 +21,8 @@ export interface PluginPackage {
 
 /**
  * processor の前に付ける測定の殻。registerProcessor を包み、process の時間を 128 サンプルの時間に対する割合として、約 1 秒ごとに port で知らせる
- * （AudioWorklet には細かい時計がないので、Date.now() の差を足し合わせて平均を取る）
+ * （AudioWorklet には細かい時計がないので、Date.now() の差を足し合わせて平均を取る）。
+ * __wevocalDispose を受け取ったら process で false を返して止める（外しただけでは true を返す processor が動き続け、再生のたびに溜まって重くなる）
  */
 const MEASURE = `;(() => {
   const reg = registerProcessor
@@ -30,6 +31,7 @@ const MEASURE = `;(() => {
     let total = 0
     let n = 0
     cls.prototype.process = function (i, o, p) {
+      if (this.__wevocalGone) return false
       const t = Date.now()
       const r = run.call(this, i, o, p)
       total += Date.now() - t
@@ -40,7 +42,15 @@ const MEASURE = `;(() => {
       }
       return r
     }
-    reg(name, cls)
+    reg(name, class extends cls {
+      constructor(o) {
+        super(o)
+        this.port.addEventListener('message', (e) => {
+          if (e.data && e.data.__wevocalDispose) this.__wevocalGone = true
+        })
+        this.port.start()
+      }
+    })
   }
 })()
 `
@@ -181,6 +191,7 @@ class WorkletFx extends FxBase {
 
   dispose() {
     this.disposed = true
+    this.node?.port.postMessage({ __wevocalDispose: true })
     this.node?.disconnect()
     super.dispose()
   }
