@@ -2,9 +2,9 @@
 // 導入するとき 1 回だけ WAM を読み込んで名前とパラメーターの一覧を調べ、マニフェストを作って固定する（毎回の読み込みでは作らない）
 import { FxBase } from '../../../../plugin-sdk/FxBase'
 import { PluginError } from '../validate'
-import { createWam, type WamInstance, type WamNodeLike } from './host'
+import { createWam, getParams, paramInfo, setParams, type WamInstance, type WamNodeLike } from './host'
 import type { PluginPackage } from '../external'
-import type { FxPlugin, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
+import type { FxPlugin, GuiHandle, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
 
 /** id に使える形にする */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wam'
@@ -24,11 +24,13 @@ export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
     const d = inst.descriptor
     if (d.isInstrument || d.hasAudioInput === false) throw new PluginError('kind')
     const name = d.name || abs.split('/').slice(-2, -1)[0] || 'WAM'
-    const info = await inst.audioNode.getParameterInfo()
+    const info = await paramInfo(inst.audioNode)
+    // 遅れ（秒）を教えてくれる WAM は、サンプルにして控える（WamNode のみ）
+    const delay = (await inst.audioNode.getCompensationDelay?.().catch(() => 0)) ?? 0
     const lang: Record<string, Record<string, string>> = { ja_jp: { name }, en_us: { name } }
     const params: ParamDef[] = []
     const ids: string[] = []
-    for (const p of Object.values(info)) {
+    for (const p of info) {
       const pid = `p${params.length}`
       const choices = p.type === 'choice' && p.choices?.length ? p.choices : undefined
       const def: ParamDef = {
@@ -55,6 +57,7 @@ export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
       name: 'name',
       // WAM のコードはこのページのスレッドでも動く（読み込みと画面の部分）ので、隔離されないことを権限として見せる
       permissions: ['main-thread'],
+      ...(delay > 0 ? { latency: Math.round(delay * ctx.sampleRate) } : {}),
       params,
       lang,
     }
@@ -130,15 +133,15 @@ class WamFx extends FxBase {
   /** 変わったつまみだけ WAM に渡す */
   private send(v: Record<string, number>) {
     if (!this.node) return
-    const updates: Record<string, { id: string; value: number; normalized: boolean }> = {}
+    const updates: Record<string, number> = {}
     this.pkg.manifest.params.forEach((p, i) => {
       const x = v[p.id]
       const id = this.pkg.wam!.ids[i]
       if (x === undefined || id === undefined || this.sent[p.id] === x) return
       this.sent[p.id] = x
-      updates[id] = { id, value: x, normalized: false }
+      updates[id] = x
     })
-    if (Object.keys(updates).length) void this.node.setParameterValues(updates)
+    if (Object.keys(updates).length) void setParams(this.node, updates)
   }
 
   dispose() {
@@ -166,5 +169,56 @@ export function makeWamPlugin(pkg: PluginPackage): FxPlugin {
       map.set(pkg.manifest.id, list)
     },
     create: (ctx, values, host, on = true, state) => new WamFx(ctx, pkg, host, state).init(values, on),
+    mountGui: (el, values, onChange) => mountWamGui(pkg, el, values, onChange),
+  }
+}
+
+/**
+ * WAM 自身の画面を el に出す。鳴らしているノードとは別に、音を出さないインスタンスを 1 つ作って画面に付け、
+ * 画面で動かしたつまみを 100 ms ごとに読んで onChange で返す（ホストの値が正で、変わったぶんだけ画面へ渡す）。
+ * 画面を持たない WAM は null（呼び出す側が自動の画面にする）
+ */
+async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<string, number>, onChange: (id: string, value: number) => void): Promise<GuiHandle | null> {
+  const { ids } = pkg.wam!
+  const params = pkg.manifest.params
+  const inst = await createWam(new OfflineAudioContext(2, 128, 48000), pkg.wam!.url).catch(() => null)
+  const gui = await inst?.createGui?.().catch(() => null)
+  if (!inst || !gui) {
+    inst?.audioNode.destroy?.()
+    return null
+  }
+  el.appendChild(gui)
+  const toWam = (v: Record<string, number>) => Object.fromEntries(params.flatMap((p, i) => (v[p.id] === undefined ? [] : [[ids[i], v[p.id]]])))
+  const known: Record<string, number> = { ...values }
+  await setParams(inst.audioNode, toWam(known))
+  let busy = false
+  const timer = setInterval(async () => {
+    if (busy) return
+    busy = true
+    try {
+      const now = await getParams(inst.audioNode, ids)
+      params.forEach((p, i) => {
+        const x = now[ids[i]]
+        if (x !== undefined && Math.abs(x - known[p.id]) > 1e-9) {
+          known[p.id] = x
+          onChange(p.id, x)
+        }
+      })
+    } finally {
+      busy = false
+    }
+  }, 100)
+  return {
+    update(v) {
+      const diff: Record<string, number> = {}
+      for (const p of params) if (v[p.id] !== undefined && v[p.id] !== known[p.id]) diff[p.id] = known[p.id] = v[p.id]
+      if (Object.keys(diff).length) void setParams(inst.audioNode, toWam(diff))
+    },
+    dispose() {
+      clearInterval(timer)
+      inst.destroyGui?.(gui)
+      gui.remove()
+      inst.audioNode.destroy?.()
+    },
   }
 }

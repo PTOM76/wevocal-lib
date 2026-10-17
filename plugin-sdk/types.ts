@@ -98,6 +98,13 @@ export interface HostInfo {
   onState?: (state: string) => void
 }
 
+/** 組み込みの画面（mountGui）の操作 */
+export interface GuiHandle {
+  /** ホスト側で値が変わった */
+  update(values: Record<string, number>): void
+  dispose(): void
+}
+
 /** 標準のプラグインの中身（今はノードを組む形） */
 export interface FxPlugin {
   manifest: PluginManifest
@@ -107,6 +114,8 @@ export interface FxPlugin {
   lang: Record<string, Record<string, string>>
   /** 独自の画面の HTML（manifest.ui を読んだもの） */
   ui?: string
+  /** 独自の画面を、ホストが用意した要素に直接組み込む（WAM の画面。iframe ではなくこのページの DOM に出る）。画面を持たなければ null */
+  mountGui?: (el: HTMLElement, values: Record<string, number>, onChange: (id: string, value: number) => void) => Promise<GuiHandle | null>
   /** 使う前に済ませる非同期の準備（processor の読み込み）。書き出しの前に呼ぶ */
   preload?: (ctx: BaseAudioContext) => Promise<void>
   create(ctx: BaseAudioContext, values: Record<string, number>, host: HostInfo, on?: boolean, state?: string): FxInstance

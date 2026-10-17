@@ -13,6 +13,7 @@ import { Choice } from './ExportDialog'
 import FxAddPicker from './FxAddPicker'
 import FxParams from './FxParams'
 import PluginUi from './PluginUi'
+import PluginGui from './PluginGui'
 
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
@@ -71,6 +72,26 @@ export default function FxChainDialog(p: {
   const plugin = slot && findPlugin(slot.plugin)
   // 古い版のつまみの id は、プラグインの migrate で読み替えて見せる（直したときに新しい id で保存される）
   const values = slot && plugin ? migrateValues(plugin.manifest, slot.values) : {}
+  // つまみの自動の画面（プラグインの画面が無いか、画面を持たない WAM のとき）
+  const fxParams =
+    slot && plugin ? (
+      <FxParams
+        plugin={plugin}
+        values={values}
+        lang={p.lang}
+        onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
+        automation={
+          p.onAutoLane
+            ? {
+                lane: p.autoLane?.slot === index ? p.autoLane.param : null,
+                has: new Set(Object.entries(slot.auto ?? {}).filter(([, pts]) => pts.length).map(([k]) => k)),
+                onLane: (param) => p.onAutoLane!(p.autoLane?.slot === index && p.autoLane.param === param ? null : { slot: index, param }),
+                title: t('fx.autoLane'),
+              }
+            : undefined
+        }
+      />
+    ) : null
   const name = (pl: FxPlugin) => fxText(pl, 'name', p.lang)
 
   const patch = (i: number, s: Partial<FxSlot>, merge?: string) => p.onChange(p.slots.map((x, j) => (j === i ? { ...x, ...s } : x)), merge)
@@ -256,23 +277,12 @@ export default function FxChainDialog(p: {
                     texts={Object.fromEntries(Object.keys({ ...plugin.lang.en_us, ...plugin.lang[p.lang] }).map((k) => [k, fxText(plugin, k, p.lang)]))}
                     onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
                   />
+                ) : plugin.mountGui ? (
+                  <PluginGui plugin={plugin} values={values} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}>
+                    {fxParams}
+                  </PluginGui>
                 ) : (
-                  <FxParams
-                    plugin={plugin}
-                    values={values}
-                    lang={p.lang}
-                    onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
-                    automation={
-                      p.onAutoLane
-                        ? {
-                            lane: p.autoLane?.slot === index ? p.autoLane.param : null,
-                            has: new Set(Object.entries(slot.auto ?? {}).filter(([, pts]) => pts.length).map(([k]) => k)),
-                            onLane: (param) => p.onAutoLane!(p.autoLane?.slot === index && p.autoLane.param === param ? null : { slot: index, param }),
-                            title: t('fx.autoLane'),
-                          }
-                        : undefined
-                    }
-                  />
+                  fxParams
                 )}
               </>
             )}
