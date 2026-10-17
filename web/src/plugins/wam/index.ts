@@ -4,7 +4,7 @@ import { FxBase } from '../../../../plugin-sdk/FxBase'
 import { PluginError } from '../validate'
 import { createWam, getParams, paramInfo, setParams, type WamInstance, type WamNodeLike } from './host'
 import type { PluginPackage } from '../external'
-import type { FxPlugin, GuiHandle, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
+import type { FxPlugin, GuiHandle, GuiState, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
 
 /** id に使える形にする */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wam'
@@ -169,7 +169,7 @@ export function makeWamPlugin(pkg: PluginPackage): FxPlugin {
       map.set(pkg.manifest.id, list)
     },
     create: (ctx, values, host, on = true, state) => new WamFx(ctx, pkg, host, state).init(values, on),
-    mountGui: (el, values, onChange) => mountWamGui(pkg, el, values, onChange),
+    mountGui: (el, values, onChange, state) => mountWamGui(pkg, el, values, onChange, state),
   }
 }
 
@@ -178,7 +178,7 @@ export function makeWamPlugin(pkg: PluginPackage): FxPlugin {
  * 画面で動かしたつまみを 100 ms ごとに読んで onChange で返す（ホストの値が正で、変わったぶんだけ画面へ渡す）。
  * 画面を持たない WAM は null（呼び出す側が自動の画面にする）
  */
-async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<string, number>, onChange: (id: string, value: number) => void): Promise<GuiHandle | null> {
+async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<string, number>, onChange: (id: string, value: number) => void, io?: GuiState): Promise<GuiHandle | null> {
   const { ids } = pkg.wam!
   const params = pkg.manifest.params
   const inst = await createWam(new OfflineAudioContext(2, 128, 48000), pkg.wam!.url).catch(() => null)
@@ -190,7 +190,30 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
   el.appendChild(gui)
   const toWam = (v: Record<string, number>) => Object.fromEntries(params.flatMap((p, i) => (v[p.id] === undefined ? [] : [[ids[i], v[p.id]]])))
   const known: Record<string, number> = { ...values }
+  // ホストから画面へ渡した値は、画面のインスタンスに届くまで読み戻さない（古い値を読んで書き戻すのを防ぐ）。id → 渡した時刻
+  const sentAt: Record<string, number> = {}
   await setParams(inst.audioNode, toWam(known))
+  // 状態（WAM に変更の通知はないので、画面を出している間だけ 500 ms ごとに読んで、変わったら知らせる）
+  const node = inst.audioNode
+  let lastState = io?.initial
+  if (io?.initial && node.setState) await node.setState(JSON.parse(io.initial)).catch(() => {})
+  // 保存してある状態がなければ、開いた時点の状態を基準にする（開いただけで保存が走らないように）
+  if (lastState === undefined && node.getState) lastState = JSON.stringify(await node.getState().catch(() => undefined))
+  let stateBusy = false
+  const stateTimer = io && node.getState
+    ? setInterval(async () => {
+        if (stateBusy) return
+        stateBusy = true
+        try {
+          const st = JSON.stringify(await node.getState!())
+          if (st !== lastState) io?.onState((lastState = st))
+        } catch {
+          // 読めない状態は無視する
+        } finally {
+          stateBusy = false
+        }
+      }, 500)
+    : 0
   let busy = false
   const timer = setInterval(async () => {
     if (busy) return
@@ -199,6 +222,11 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
       const now = await getParams(inst.audioNode, ids)
       params.forEach((p, i) => {
         const x = now[ids[i]]
+        if (p.id in sentAt) {
+          if (x !== undefined && Math.abs(x - known[p.id]) <= 1e-9) delete sentAt[p.id]
+          else if (Date.now() - sentAt[p.id] < 1000) return
+          else delete sentAt[p.id]
+        }
         if (x !== undefined && Math.abs(x - known[p.id]) > 1e-9) {
           known[p.id] = x
           onChange(p.id, x)
@@ -211,11 +239,15 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
   return {
     update(v) {
       const diff: Record<string, number> = {}
-      for (const p of params) if (v[p.id] !== undefined && v[p.id] !== known[p.id]) diff[p.id] = known[p.id] = v[p.id]
+      for (const p of params) if (v[p.id] !== undefined && v[p.id] !== known[p.id]) {
+        diff[p.id] = known[p.id] = v[p.id]
+        sentAt[p.id] = Date.now()
+      }
       if (Object.keys(diff).length) void setParams(inst.audioNode, toWam(diff))
     },
     dispose() {
       clearInterval(timer)
+      clearInterval(stateTimer)
       inst.destroyGui?.(gui)
       gui.remove()
       inst.audioNode.destroy?.()

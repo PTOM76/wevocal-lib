@@ -6,6 +6,9 @@ export default function PluginGui(p: {
   plugin: FxPlugin
   values: Record<string, number>
   onChange: (id: string, value: number) => void
+  /** つまみ以外の状態（保存してあるもの）と、画面で変わったときの知らせ先 */
+  state?: string
+  onState?: (state: string) => void
   /** true なら、プラグイン自身の画面は出さず、標準の画面（children）を出す */
   standard?: boolean
   /** プラグイン自身の画面が出せるか分かったとき（出せなければ false） */
@@ -26,7 +29,7 @@ export default function PluginGui(p: {
       return
     }
     setState('loading')
-    void p.plugin.mountGui!(host.current!, latest.current.values, (id, v) => latest.current.onChange(id, v)).then((h) => {
+    void p.plugin.mountGui!(host.current!, latest.current.values, (id, v) => latest.current.onChange(id, v), { initial: latest.current.state, onState: (st) => latest.current.onState?.(st) }).then((h) => {
       if (dead) return h?.dispose()
       handle.current = h
       setState(h ? 'ok' : 'none')

@@ -311,6 +311,8 @@ export default function FxChainDialog(p: {
                       plugin={plugin}
                       values={values}
                       standard={!!standard[plugin.manifest.id]}
+                      state={slot.state}
+                      onState={(st) => patch(index, { state: st }, `fx:${index}:state`)}
                       onAvailable={(ok) => ok || setNoGui((m) => ({ ...m, [plugin.manifest.id]: true }))}
                       onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
                     >
