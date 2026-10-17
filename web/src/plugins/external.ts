@@ -1,6 +1,7 @@
 // 外から足したプラグイン（processor 方式）。AudioWorklet のモジュールを読み込み、つまみは AudioParam として渡す
 import { FxBase, SMOOTH } from '../../../plugin-sdk/FxBase'
 import { reportLoad, setOverloaded } from './registry'
+import { mountVstGui } from './vst/gui'
 import { processorName, type FxPlugin, type HostInfo, type PluginManifest } from '../../../plugin-sdk'
 
 /** 導入したプラグインの中身（マニフェストと、processor のソース、wasm） */
@@ -192,6 +193,8 @@ export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
     lang: pkg.manifest.lang ?? {},
     ui: pkg.ui,
     preload: async (ctx) => void (await loadModule(ctx, pkg)),
+    // VST は DLL 自身の画面を出す（画面が無ければ null で、自動の画面になる）
+    mountGui: pkg.manifest.format === 'vst' ? (el, values, onChange) => mountVstGui(pkg, el, values, onChange) : undefined,
     create: (ctx, values, host, on = true, state) => new WorkletFx(ctx, pkg, host, state).init(values, on),
   }
 }

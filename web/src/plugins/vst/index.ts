@@ -4,22 +4,9 @@
 import { PluginError } from '../validate'
 import type { PluginPackage } from '../external'
 import type { PluginManifest } from '../../../../plugin-sdk'
-import init, { JsVst } from './vstbridge.js'
-import wasmUrl from './vstbridge_bg.wasm?url'
+import { JsVst } from './vstbridge.js'
+import { loadBridge } from './bridge'
 import { WORKLET_GLUE } from './workletGlue'
-
-let ready: Promise<ArrayBuffer> | null = null
-
-/** wasm を読み込む（初回だけ）。processor にも同じバイト列を渡す */
-function load(): Promise<ArrayBuffer> {
-  ready ??= fetch(wasmUrl)
-    .then((r) => r.arrayBuffer())
-    .then(async (bytes) => {
-      await init({ module_or_path: bytes })
-      return bytes
-    })
-  return ready
-}
 
 /** id に使える形にする */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'vst'
@@ -91,7 +78,7 @@ registerProcessor('${name}', VstProcessor)
  * 導入するとき 1 回だけ呼ぶ（つまみの数と名前は DLL ごとに違うので、ここで調べて manifest に固定する）
  */
 export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<PluginPackage> {
-  const wasm = await load()
+  const wasm = await loadBridge()
   let vst: JsVst
   try {
     vst = new JsVst(new Uint8Array(dll))

@@ -12,6 +12,70 @@ export class JsVst {
         wasm.__wbg_jsvst_free(ptr, 0);
     }
     /**
+     * 画面でつまみを変えた分。[index, 値, index, 値, …]
+     * @returns {Float32Array}
+     */
+    editorChanges() {
+        const ret = wasm.jsvst_editorChanges(this.__wbg_ptr);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    editorClose() {
+        const ret = wasm.jsvst_editorClose(this.__wbg_ptr);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * 今の画面（RGBA。幅と高さは editorOpen で返したもの）
+     * @returns {Uint8Array | undefined}
+     */
+    editorFrame() {
+        const ret = wasm.jsvst_editorFrame(this.__wbg_ptr);
+        let v1;
+        if (ret[0] !== 0) {
+            v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v1;
+    }
+    /**
+     * 一定時間ごと（30 回ほど毎秒）に呼ぶ
+     */
+    editorIdle() {
+        const ret = wasm.jsvst_editorIdle(this.__wbg_ptr);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * マウスの入力。msg は 0x200 移動、0x201 左ボタンを押した、0x202 離した、0x203 ダブルクリック。keys は bit0 左ボタン、bit1 Ctrl、bit2 Shift
+     * @param {number} msg
+     * @param {number} x
+     * @param {number} y
+     * @param {number} keys
+     */
+    editorMouse(msg, x, y, keys) {
+        const ret = wasm.jsvst_editorMouse(this.__wbg_ptr, msg, x, y, keys);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * 画面を開く。[幅, 高さ]
+     * @returns {Int32Array}
+     */
+    editorOpen() {
+        const ret = wasm.jsvst_editorOpen(this.__wbg_ptr);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v1 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
      * @param {number} index
      * @returns {number}
      */
@@ -21,6 +85,14 @@ export class JsVst {
             throw takeFromExternrefTable0(ret[1]);
         }
         return ret[0];
+    }
+    /**
+     * 画面を持つか
+     * @returns {boolean}
+     */
+    hasEditor() {
+        const ret = wasm.jsvst_hasEditor(this.__wbg_ptr);
+        return ret !== 0;
     }
     /**
      * 32 ビットの DLL か
@@ -191,6 +263,11 @@ function getArrayF32FromWasm0(ptr, len) {
     return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 
+function getArrayI32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 function getArrayJsValueFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     const mem = getDataViewMemory0();
@@ -200,6 +277,11 @@ function getArrayJsValueFromWasm0(ptr, len) {
     }
     wasm.__externref_drop_slice(ptr, len);
     return result;
+}
+
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 
 let cachedDataViewMemory0 = null;
@@ -216,6 +298,14 @@ function getFloat32ArrayMemory0() {
         cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
     }
     return cachedFloat32ArrayMemory0;
+}
+
+let cachedInt32ArrayMemory0 = null;
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
 }
 
 function getStringFromWasm0(ptr, len) {
@@ -276,6 +366,7 @@ function __wbg_finalize_init(instance, module) {
     wasmModule = module;
     cachedDataViewMemory0 = null;
     cachedFloat32ArrayMemory0 = null;
+    cachedInt32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
     wasm.__wbindgen_start();
     return wasm;

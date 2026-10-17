@@ -4,7 +4,32 @@
 export class JsVst {
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * 画面でつまみを変えた分。[index, 値, index, 値, …]
+     */
+    editorChanges(): Float32Array;
+    editorClose(): void;
+    /**
+     * 今の画面（RGBA。幅と高さは editorOpen で返したもの）
+     */
+    editorFrame(): Uint8Array | undefined;
+    /**
+     * 一定時間ごと（30 回ほど毎秒）に呼ぶ
+     */
+    editorIdle(): void;
+    /**
+     * マウスの入力。msg は 0x200 移動、0x201 左ボタンを押した、0x202 離した、0x203 ダブルクリック。keys は bit0 左ボタン、bit1 Ctrl、bit2 Shift
+     */
+    editorMouse(msg: number, x: number, y: number, keys: number): void;
+    /**
+     * 画面を開く。[幅, 高さ]
+     */
+    editorOpen(): Int32Array;
     getParam(index: number): number;
+    /**
+     * 画面を持つか
+     */
+    hasEditor(): boolean;
     name(): string;
     /**
      * DLL のバイト列から読み込む（32 ビットも 64 ビットも）
@@ -33,7 +58,14 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_jsvst_free: (a: number, b: number) => void;
+    readonly jsvst_editorChanges: (a: number) => [number, number];
+    readonly jsvst_editorClose: (a: number) => [number, number];
+    readonly jsvst_editorFrame: (a: number) => [number, number];
+    readonly jsvst_editorIdle: (a: number) => [number, number];
+    readonly jsvst_editorMouse: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly jsvst_editorOpen: (a: number) => [number, number, number, number];
     readonly jsvst_getParam: (a: number, b: number) => [number, number, number];
+    readonly jsvst_hasEditor: (a: number) => number;
     readonly jsvst_is32bit: (a: number) => number;
     readonly jsvst_name: (a: number) => [number, number, number, number];
     readonly jsvst_new: (a: number, b: number) => [number, number, number];
@@ -44,8 +76,8 @@ export interface InitOutput {
     readonly jsvst_process: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __externref_table_alloc: () => number;
     readonly __externref_drop_slice: (a: number, b: number) => void;
