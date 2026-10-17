@@ -30,6 +30,10 @@ export class JsVst {
      * 画面を持つか
      */
     hasEditor(): boolean;
+    /**
+     * JIT で実行した命令の割合（調査用。0..1）
+     */
+    jitCoverage(): number;
     name(): string;
     /**
      * DLL のバイト列から読み込む（32 ビットも 64 ビットも）
@@ -53,11 +57,17 @@ export class JsVst {
     readonly numParams: number;
 }
 
+/**
+ * JIT のつなぎ方の確かめ（引数に 42 を足して返す）
+ */
+export function jitSelftest(x: number): number;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_jsvst_free: (a: number, b: number) => void;
+    readonly jitSelftest: (a: number) => [number, number, number];
     readonly jsvst_editorChanges: (a: number) => [number, number];
     readonly jsvst_editorClose: (a: number) => [number, number];
     readonly jsvst_editorFrame: (a: number) => [number, number];
@@ -67,6 +77,7 @@ export interface InitOutput {
     readonly jsvst_getParam: (a: number, b: number) => [number, number, number];
     readonly jsvst_hasEditor: (a: number) => number;
     readonly jsvst_is32bit: (a: number) => number;
+    readonly jsvst_jitCoverage: (a: number) => number;
     readonly jsvst_name: (a: number) => [number, number, number, number];
     readonly jsvst_new: (a: number, b: number) => [number, number, number];
     readonly jsvst_numInputs: (a: number) => number;
@@ -75,11 +86,14 @@ export interface InitOutput {
     readonly jsvst_paramName: (a: number, b: number) => [number, number, number, number];
     readonly jsvst_process: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
-    readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
+    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export: WebAssembly.Table;
+    readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
+    readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __externref_table_dealloc: (a: number) => void;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_start: () => void;
 }
