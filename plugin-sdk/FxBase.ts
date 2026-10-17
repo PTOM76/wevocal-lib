@@ -71,7 +71,17 @@ export abstract class FxBase implements FxInstance {
   }
 
   dispose(): void {
-    for (const n of this.tracked) n.disconnect()
+    for (const n of this.tracked) {
+      n.disconnect()
+      // 鳴らし始めた音源（LFO など）は止める（外しただけでは動き続け、再生のたびに溜まる）
+      if (n instanceof AudioScheduledSourceNode) {
+        try {
+          n.stop()
+        } catch {
+          // まだ始めていない
+        }
+      }
+    }
   }
 
   /** 片付けの対象に登録する */
