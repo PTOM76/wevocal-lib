@@ -19,7 +19,7 @@ import PluginGui from './PluginGui'
 export type FxChainDialogKey =
   | EqDialogKey
   | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
-  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError'
+  | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError' | 'fx.guiNative' | 'fx.guiStandard'
 
 type Values = Record<string, number>
 
@@ -58,6 +58,25 @@ export default function FxChainDialog(p: {
   // 導入したプラグインの負荷と、重くて素通しにしたもの
   useSyncExternalStore(subscribeLoad, loadVersion)
   const [sel, setSel] = useState(0)
+  // プラグイン自身の画面か、標準の画面か（プラグインごとに覚える。画面が出せないと分かったプラグインは切り替えを出さない）
+  const [standard, setStandard] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('wevocal.fxGuiStandard') ?? '{}')
+    } catch {
+      return {}
+    }
+  })
+  const [noGui, setNoGui] = useState<Record<string, boolean>>({})
+  const setStd = (id: string, v: boolean) =>
+    setStandard((m) => {
+      const next = { ...m, [id]: v }
+      try {
+        localStorage.setItem('wevocal.fxGuiStandard', JSON.stringify(next))
+      } catch {
+        // 保存できなくても動く
+      }
+      return next
+    })
   // ドラッグで並び替えているときの、つかんでいる項目と、落とす位置（その項目の前）
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
@@ -278,9 +297,26 @@ export default function FxChainDialog(p: {
                     onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
                   />
                 ) : plugin.mountGui ? (
-                  <PluginGui plugin={plugin} values={values} onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}>
-                    {fxParams}
-                  </PluginGui>
+                  <>
+                    {!noGui[plugin.manifest.id] && (
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                        {([false, true] as const).map((std) => (
+                          <Button key={String(std)} size="small" onClick={() => setStd(plugin.manifest.id, std)} sx={{ fontWeight: !!standard[plugin.manifest.id] === std ? 'bold' : 'normal', color: !!standard[plugin.manifest.id] === std ? 'primary.main' : 'text.secondary' }}>
+                            {t(std ? 'fx.guiStandard' : 'fx.guiNative')}
+                          </Button>
+                        ))}
+                      </Box>
+                    )}
+                    <PluginGui
+                      plugin={plugin}
+                      values={values}
+                      standard={!!standard[plugin.manifest.id]}
+                      onAvailable={(ok) => ok || setNoGui((m) => ({ ...m, [plugin.manifest.id]: true }))}
+                      onChange={(id, v) => patch(index, { values: { ...values, [id]: v } }, `fx:${index}:${id}`)}
+                    >
+                      {fxParams}
+                    </PluginGui>
+                  </>
                 ) : (
                   fxParams
                 )}

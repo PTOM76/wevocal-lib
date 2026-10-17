@@ -1,8 +1,17 @@
-// プラグイン自身の画面（FxPlugin.mountGui。WAM の画面）をこのページの DOM に出す。画面を持たなければ children（自動の画面）を出す
+// プラグイン自身の画面（FxPlugin.mountGui。WAM、VST の画面）をこのページの DOM に出す。画面を持たない、または standard のときは children（標準の画面）を出す
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { FxPlugin, GuiHandle } from '../../../plugin-sdk'
 
-export default function PluginGui(p: { plugin: FxPlugin; values: Record<string, number>; onChange: (id: string, value: number) => void; children: ReactNode }) {
+export default function PluginGui(p: {
+  plugin: FxPlugin
+  values: Record<string, number>
+  onChange: (id: string, value: number) => void
+  /** true なら、プラグイン自身の画面は出さず、標準の画面（children）を出す */
+  standard?: boolean
+  /** プラグイン自身の画面が出せるか分かったとき（出せなければ false） */
+  onAvailable?: (ok: boolean) => void
+  children: ReactNode
+}) {
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<GuiHandle | null>(null)
   const latest = useRef(p)
@@ -12,18 +21,23 @@ export default function PluginGui(p: { plugin: FxPlugin; values: Record<string, 
   // プラグインが変わったら作り直す
   useEffect(() => {
     let dead = false
+    if (p.standard) {
+      setState('none')
+      return
+    }
     setState('loading')
     void p.plugin.mountGui!(host.current!, latest.current.values, (id, v) => latest.current.onChange(id, v)).then((h) => {
       if (dead) return h?.dispose()
       handle.current = h
       setState(h ? 'ok' : 'none')
+      latest.current.onAvailable?.(!!h)
     })
     return () => {
       dead = true
       handle.current?.dispose()
       handle.current = null
     }
-  }, [p.plugin])
+  }, [p.plugin, p.standard])
 
   // ホストの値が変わったら画面へ
   useEffect(() => handle.current?.update(p.values), [p.values])
