@@ -1,7 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
-import { PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
+import { ContextMenu, PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxDescription, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
@@ -18,10 +18,13 @@ import PluginGui from './PluginGui'
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
   | EqDialogKey
-  | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
+  | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.copy' | 'fx.paste' | 'fx.duplicate' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
   | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError' | 'fx.guiNative' | 'fx.guiStandard' | 'fx.guiZoomAuto' | 'fx.guiZoomIn' | 'fx.guiZoomOut'
 
 type Values = Record<string, number>
+
+// コピーしたエフェクト（トラックをまたいで貼り付けられるよう、ダイアログの外に持つ）
+let copied: FxSlot | null = null
 
 export default function FxChainDialog(p: {
   t: (key: FxChainDialogKey, vars?: Record<string, string | number>) => string
@@ -138,6 +141,32 @@ export default function FxChainDialog(p: {
     p.onChange(p.slots.filter((_, j) => j !== i))
     setSel(Math.max(0, i - 1))
   }
+  /** s を i の位置に入れる（貼り付けと複製） */
+  const insert = (i: number, s: FxSlot) => {
+    p.onChange([...p.slots.slice(0, i), structuredClone(s), ...p.slots.slice(i)])
+    setSel(i)
+  }
+  const copy = (i: number) => {
+    copied = structuredClone(p.slots[i])
+  }
+  // 選んだ項目の次に貼り付ける（無ければ末尾）
+  const paste = () => copied && insert(p.slots.length ? index + 1 : 0, copied)
+  // 右クリックで出すメニュー（i は項目。列の空いたところなら null）
+  const [menu, setMenu] = useState<{ x: number; y: number; i: number | null } | null>(null)
+  const mod = navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl+'
+  const onKey = (e: KeyboardEvent) => {
+    if (adding || !slot || e.target !== e.currentTarget) return
+    const k = e.key.toLowerCase()
+    const ctrl = e.ctrlKey || e.metaKey
+    if (k === 'delete' || k === 'backspace') remove(index)
+    else if (ctrl && k === 'c') copy(index)
+    else if (ctrl && k === 'v') paste()
+    else if (ctrl && k === 'd') insert(index + 1, slot)
+    else if (k === 'arrowup' && index > 0) setSel(index - 1)
+    else if (k === 'arrowdown' && index < p.slots.length - 1) setSel(index + 1)
+    else return
+    e.preventDefault()
+  }
   const stop = (e: { stopPropagation: () => void }, run: () => void) => {
     e.stopPropagation()
     run()
@@ -152,7 +181,16 @@ export default function FxChainDialog(p: {
     <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" width={900} height={640} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 280 }}>
-          <Box sx={{ width: { xs: '100%', sm: 240 }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {/* 列にフォーカスがあるとき、Delete で削除、Ctrl+C、Ctrl+V、Ctrl+D でコピー、貼り付け、複製 */}
+          <Box
+            tabIndex={0}
+            onKeyDown={onKey}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              setMenu({ x: e.clientX, y: e.clientY, i: null })
+            }}
+            sx={{ width: { xs: '100%', sm: 240 }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5, outline: 'none' }}
+          >
             {!p.slots.length && <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{t('fx.empty')}</Typography>}
             {p.slots.map((s, i) => {
               const pl = findPlugin(s.plugin)
@@ -160,6 +198,12 @@ export default function FxChainDialog(p: {
                 <Box
                   key={i}
                   onClick={() => setSel(i)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setSel(i)
+                    setMenu({ x: e.clientX, y: e.clientY, i })
+                  }}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.effectAllowed = 'move'
@@ -235,6 +279,26 @@ export default function FxChainDialog(p: {
             <Button size="small" sx={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>
               {t('fx.add')}
             </Button>
+            <ContextMenu
+              position={menu}
+              onClose={() => setMenu(null)}
+              entries={
+                menu?.i != null
+                  ? [
+                      { label: t('fx.on'), checked: p.slots[menu.i]?.on, onClick: () => patch(menu.i!, { on: !p.slots[menu.i!].on }) },
+                      { divider: true },
+                      { label: t('fx.copy'), shortcut: `${mod}C`, onClick: () => copy(menu.i!) },
+                      { label: t('fx.paste'), shortcut: `${mod}V`, disabled: !copied, onClick: paste },
+                      { label: t('fx.duplicate'), shortcut: `${mod}D`, onClick: () => insert(menu.i! + 1, p.slots[menu.i!]) },
+                      { divider: true },
+                      { label: t('fx.remove'), shortcut: 'Delete', onClick: () => remove(menu.i!) },
+                    ]
+                  : [
+                      { label: t('fx.add'), onClick: () => setAdding(true) },
+                      { label: t('fx.paste'), shortcut: `${mod}V`, disabled: !copied, onClick: paste },
+                    ]
+              }
+            />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {adding && <FxAddPicker plugins={plugins} lang={p.lang} onPick={add} onCancel={() => setAdding(false)} labels={{ search: t('fx.search'), none: t('fx.noMatch'), cancel: t('fx.addCancel') }} />}
