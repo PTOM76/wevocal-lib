@@ -1,0 +1,170 @@
+// WebAudio Modules 2.0 を、WeVocal の FX プラグインとして包む。
+// 導入するとき 1 回だけ WAM を読み込んで名前とパラメーターの一覧を調べ、マニフェストを作って固定する（毎回の読み込みでは作らない）
+import { FxBase } from '../../../../plugin-sdk/FxBase'
+import { PluginError } from '../validate'
+import { createWam, type WamInstance, type WamNodeLike } from './host'
+import type { PluginPackage } from '../external'
+import type { FxPlugin, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
+
+/** id に使える形にする */
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wam'
+
+/** URL（モジュールの JS）から、導入するパッケージを作る。読み込めない、FX でない WAM は PluginError */
+export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
+  const abs = new URL(url, location.href).href
+  // 調べるだけなので、音を出さない小さな OfflineAudioContext を使う
+  const ctx = new OfflineAudioContext(2, 128, 48000)
+  let inst: WamInstance
+  try {
+    inst = await createWam(ctx, abs)
+  } catch (e) {
+    throw new PluginError('wam', e instanceof Error ? e.message : String(e))
+  }
+  try {
+    const d = inst.descriptor
+    if (d.isInstrument || d.hasAudioInput === false) throw new PluginError('kind')
+    const name = d.name || abs.split('/').slice(-2, -1)[0] || 'WAM'
+    const info = await inst.audioNode.getParameterInfo()
+    const lang: Record<string, Record<string, string>> = { ja_jp: { name }, en_us: { name } }
+    const params: ParamDef[] = []
+    const ids: string[] = []
+    for (const p of Object.values(info)) {
+      const pid = `p${params.length}`
+      const choices = p.type === 'choice' && p.choices?.length ? p.choices : undefined
+      const def: ParamDef = {
+        id: pid,
+        name: `param.${pid}`,
+        min: choices ? 0 : p.minValue,
+        max: choices ? choices.length - 1 : p.maxValue,
+        default: choices ? Math.max(0, Math.min(choices.length - 1, Math.round(p.defaultValue))) : p.defaultValue,
+        ...(p.type === 'int' || p.type === 'boolean' ? { step: 1 } : p.discreteStep ? { step: p.discreteStep } : {}),
+        ...(choices ? { choices: choices.map((_, i) => `choice.${pid}.${i}`) } : {}),
+      }
+      params.push(def)
+      ids.push(p.id)
+      lang.ja_jp[def.name] = lang.en_us[def.name] = p.label || p.id
+      choices?.forEach((c, i) => (lang.ja_jp[`choice.${pid}.${i}`] = lang.en_us[`choice.${pid}.${i}`] = String(c)))
+    }
+    const manifest: PluginManifest = {
+      id: `wam.${slug(d.identifier || name)}-${slug(new URL(abs).host)}`.slice(0, 64),
+      api: 1,
+      kind: 'fx',
+      format: 'wam',
+      version: d.version || '1.0.0',
+      author: d.vendor || 'WAM',
+      name: 'name',
+      // WAM のコードはこのページのスレッドでも動く（読み込みと画面の部分）ので、隔離されないことを権限として見せる
+      permissions: ['main-thread'],
+      params,
+      lang,
+    }
+    return { manifest, processor: '', wam: { url: abs, ids }, source: abs }
+  } finally {
+    inst.audioNode.destroy?.()
+  }
+}
+
+/** preload で作ったインスタンスを create へ渡す（書き出しは同期でグラフを組むので、先に作っておく） */
+const pool = new WeakMap<BaseAudioContext, Map<string, WamInstance[]>>()
+
+class WamFx extends FxBase {
+  private node: WamNodeLike | null = null
+  private disposed = false
+  private wanted = true
+  private waiting = false
+  private latest: Record<string, number> = {}
+  private sent: Record<string, number> = {}
+  private state?: string
+  private readonly pkg: PluginPackage
+
+  constructor(ctx: BaseAudioContext, pkg: PluginPackage, host: HostInfo, state?: string) {
+    super(ctx, pkg.manifest, host)
+    this.pkg = pkg
+    this.state = state
+  }
+
+  protected build() {
+    const ready = pool.get(this.ctx)?.get(this.pkg.manifest.id)?.pop()
+    if (ready) return this.attach(ready)
+    // まだ作れていなければ、できるまで素通し
+    this.waiting = true
+    super.setOn(false)
+    createWam(this.ctx, this.pkg.wam!.url).then(
+      (inst) => {
+        this.waiting = false
+        if (this.disposed) inst.audioNode.destroy?.()
+        else this.attach(inst)
+        super.setOn(this.wanted)
+      },
+      (e) => console.warn(`plugin ${this.pkg.manifest.id}: failed to load`, e),
+    )
+  }
+
+  private attach(inst: WamInstance) {
+    this.node = inst.audioNode
+    if (this.state) this.setState(this.state)
+    this.src.connect(this.node).connect(this.dst)
+    this.send(this.latest)
+  }
+
+  setState(state: string | undefined) {
+    this.state = state
+    if (!state || !this.node?.setState) return
+    try {
+      void this.node.setState(JSON.parse(state))
+    } catch {
+      // 読めない状態は捨てる
+    }
+  }
+
+  setOn(on: boolean, immediate = false) {
+    this.wanted = on
+    super.setOn(on && !this.waiting, immediate)
+  }
+
+  protected apply(v: Record<string, number>) {
+    this.latest = v
+    this.send(v)
+  }
+
+  /** 変わったつまみだけ WAM に渡す */
+  private send(v: Record<string, number>) {
+    if (!this.node) return
+    const updates: Record<string, { id: string; value: number; normalized: boolean }> = {}
+    this.pkg.manifest.params.forEach((p, i) => {
+      const x = v[p.id]
+      const id = this.pkg.wam!.ids[i]
+      if (x === undefined || id === undefined || this.sent[p.id] === x) return
+      this.sent[p.id] = x
+      updates[id] = { id, value: x, normalized: false }
+    })
+    if (Object.keys(updates).length) void this.node.setParameterValues(updates)
+  }
+
+  dispose() {
+    this.disposed = true
+    this.node?.disconnect()
+    this.node?.destroy?.()
+    super.dispose()
+  }
+}
+
+/** パッケージから FX プラグインを作る */
+export function makeWamPlugin(pkg: PluginPackage): FxPlugin {
+  return {
+    manifest: pkg.manifest,
+    lang: pkg.manifest.lang ?? {},
+    preload: async (ctx) => {
+      let map = pool.get(ctx)
+      if (!map) pool.set(ctx, (map = new Map()))
+      const list = map.get(pkg.manifest.id) ?? []
+      // 1 つだけ先に作る（同じ WAM を複数の列に入れたぶんは、できるまで素通し）
+      if (!list.length) {
+        const inst = await createWam(ctx, pkg.wam!.url).catch(() => null)
+        if (inst) list.push(inst)
+      }
+      map.set(pkg.manifest.id, list)
+    },
+    create: (ctx, values, host, on = true, state) => new WamFx(ctx, pkg, host, state).init(values, on),
+  }
+}

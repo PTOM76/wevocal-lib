@@ -2,13 +2,13 @@
 import { useRef, useState, useSyncExternalStore } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, TextField, Typography } from '@mui/material'
 import { WindowDialog, pevenFont } from 'pevenmui'
-import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, installedTools, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, vstPackageFromFile, vstPackageFromUrl, type PluginPackage } from '../plugins'
+import { fetchPackage, fxText, installPackage, installedInstruments, installedPlugins, installedTools, PluginError, pluginsVersion, removePlugin, subscribePlugins, updatePlugin, vstPackageFromFile, vstPackageFromUrl, wamPackageFromUrl, type PluginPackage } from '../plugins'
 
 /** この画面が使う訳文のキー（アプリの訳文に同じキーを置く） */
 export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
   | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
-  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+  | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.wam' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
 
 /** エラーを画面の文にする（VST の読み込みの失敗は、理由の詳細を添える） */
 function errorText(t: (key: PluginManagerKey) => string, e: unknown) {
@@ -45,7 +45,8 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
     try {
       const u = url.trim()
       // .dll で終わる URL は VST として取り込む（試験的機能がオンのとき）
-      setPending(p.vst && /\.dll(\?.*)?$/i.test(u) ? await vstPackageFromUrl(u) : await fetchPackage(u))
+      // .js で終わる URL は WebAudio Modules として取り込む
+      setPending(p.vst && /\.dll(\?.*)?$/i.test(u) ? await vstPackageFromUrl(u) : /\.m?js(\?.*)?$/i.test(u) ? await wamPackageFromUrl(u) : await fetchPackage(u))
     } catch (e) {
       setError(errorText(t, e))
     } finally {

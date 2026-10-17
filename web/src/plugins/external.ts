@@ -10,6 +10,8 @@ export interface PluginPackage {
   wasm?: ArrayBuffer
   /** processor が読むもう一つのファイル（VST の DLL など。processorOptions.dll で渡す。format: 'vst' のとき） */
   dll?: ArrayBuffer
+  /** WebAudio Modules のとき: モジュールの URL と、params の順に対応する WAM のパラメーター id（format: 'wam'） */
+  wam?: { url: string; ids: string[] }
   /** 独自の画面の HTML */
   ui?: string
   /** 取得元のマニフェストの URL（更新に使う） */

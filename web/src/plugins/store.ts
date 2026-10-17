@@ -1,4 +1,5 @@
 // プラグインの導入と保存。URL から取得して、置き場（PevenMUI の createPackageStore。Cache Storage と、選んだフォルダー）に置く。ネットが無くても使える
+import { makeWamPlugin, wamPackageFromUrl } from './wam'
 import { makeExternalPlugin, type PluginPackage } from './external'
 import { setInstalledPlugins } from './registry'
 import { setInstalledTools, type ToolPlugin } from './tools'
@@ -49,6 +50,7 @@ export async function installPackage(pkg: PluginPackage): Promise<void> {
   const files: Record<string, string | ArrayBuffer> = { 'manifest.json': JSON.stringify(pkg.manifest), 'processor.js': pkg.processor }
   if (pkg.wasm) files['module.wasm'] = pkg.wasm
   if (pkg.dll) files['plugin.dll'] = pkg.dll
+  if (pkg.wam) files['wam.json'] = JSON.stringify(pkg.wam)
   if (pkg.ui) files['ui.html'] = pkg.ui
   if (pkg.source) files['source.txt'] = pkg.source
   await store.put(pkg.manifest.id, files)
@@ -70,7 +72,7 @@ export async function pluginSource(id: string): Promise<string | null> {
 export async function updatePlugin(id: string): Promise<'updated' | 'same' | 'none'> {
   const source = await pluginSource(id)
   if (!source) return 'none'
-  const pkg = await fetchPackage(source)
+  const pkg = /\.m?js(\?.*)?$/i.test(source) ? await wamPackageFromUrl(source) : await fetchPackage(source)
   if (pkg.manifest.id !== id) throw new PluginError('id')
   const current = (await store?.getText(id, 'manifest.json').then((t) => (t ? validateManifest(JSON.parse(t), true) : null)).catch(() => null))?.version
   if (current === pkg.manifest.version) return 'same'
@@ -98,12 +100,17 @@ async function readInstalled(): Promise<void> {
     try {
       const text = await store.getText(id, 'manifest.json')
       const processor = await store.getText(id, 'processor.js')
-      if (!text || !processor) continue
-      const manifest = validateManifest(JSON.parse(text), true)
+      const manifest = text ? validateManifest(JSON.parse(text), true) : null
+      if (!manifest || (!processor && manifest.format !== 'wam')) continue
+      if (manifest.format === 'wam') {
+        const wam = JSON.parse((await store.getText(id, 'wam.json')) ?? 'null') as PluginPackage['wam'] | null
+        if (wam && manifest.kind === 'fx') list.push(makeWamPlugin({ manifest, processor: '', wam }))
+        continue
+      }
       const wasm = (await store.get(id, 'module.wasm')) ?? undefined
       const dll = (await store.get(id, 'plugin.dll')) ?? undefined
       const ui = manifest.ui ? ((await store.getText(id, 'ui.html')) ?? undefined) : undefined
-      const pkg = { manifest, processor, wasm, dll, ui }
+      const pkg = { manifest, processor: processor ?? '', wasm, dll, ui }
       if (manifest.kind === 'tool' || manifest.kind === 'analyzer') tools.push({ manifest, lang: manifest.lang ?? {}, pkg })
       else if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
       else list.push(makeExternalPlugin(pkg))

@@ -1,7 +1,7 @@
 // プラグインのマニフェストの検査（URL から足すもの。信用しない入力として形を確かめる）
 import type { ParamDef, PluginManifest } from '../../../plugin-sdk'
 
-export type PluginErrorCode = 'fetch' | 'manifest' | 'api' | 'kind' | 'format' | 'id' | 'processor' | 'reserved' | 'vst'
+export type PluginErrorCode = 'fetch' | 'manifest' | 'api' | 'kind' | 'format' | 'id' | 'processor' | 'reserved' | 'vst' | 'wam'
 
 export class PluginError extends Error {
   readonly code: PluginErrorCode
@@ -23,15 +23,15 @@ const RESERVED = /^wevocal\./
 
 /**
  * 外から来た JSON をマニフェストにする。形が違えば PluginError。
- * format: 'vst'（試験的。DLL をエミュレーターで動かす）は、アプリが DLL から自分で作ったもの（導入済みの読み込み）だけ allowVst で通す。
- * URL から取得したマニフェストは名乗れない（DLL が無いまま通ってしまわないように）
+ * format: 'vst'（試験的。DLL をエミュレーターで動かす）と 'wam'（WebAudio Modules）は、アプリが導入のときに自分で作ったもの（導入済みの読み込み）だけ allowVst で通す。
+ * URL から取得したマニフェストは名乗れない（DLL や WAM の URL が無いまま通ってしまわないように）
  */
 export function validateManifest(raw: unknown, allowVst = false): PluginManifest {
   const m = raw as Partial<PluginManifest> | null
   if (!m || typeof m !== 'object') throw new PluginError('manifest')
   if (m.api !== 1) throw new PluginError('api')
   if (m.kind !== 'fx' && m.kind !== 'instrument' && m.kind !== 'tool' && m.kind !== 'analyzer') throw new PluginError('kind')
-  if (m.format !== 'wevocal' && !(allowVst && m.format === 'vst')) throw new PluginError('format')
+  if (m.format !== 'wevocal' && !(allowVst && (m.format === 'vst' || m.format === 'wam'))) throw new PluginError('format')
   if (typeof m.id !== 'string' || !/^[a-z0-9][a-z0-9._-]{1,63}$/.test(m.id)) throw new PluginError('id')
   if (RESERVED.test(m.id)) throw new PluginError('reserved')
   if (!Array.isArray(m.params)) throw new PluginError('manifest')
@@ -55,7 +55,7 @@ export function validateManifest(raw: unknown, allowVst = false): PluginManifest
     id: m.id,
     api: 1,
     kind: m.kind,
-    format: m.format === 'vst' ? 'vst' : 'wevocal',
+    format: m.format === 'vst' || m.format === 'wam' ? m.format : 'wevocal',
     version: str(m.version, '0.0.0'),
     author: str(m.author, '?'),
     name: str(m.name, 'name'),
