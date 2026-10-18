@@ -54,7 +54,18 @@ export async function installPackage(pkg: PluginPackage): Promise<boolean> {
   if (pkg.wam) files['wam.json'] = JSON.stringify(pkg.wam)
   if (pkg.ui) files['ui.html'] = pkg.ui
   if (pkg.source) files['source.txt'] = pkg.source
-  const cached = await store.put(pkg.manifest.id, files)
+  let cached: boolean
+  try {
+    cached = await store.put(pkg.manifest.id, files)
+  } catch (error) {
+    console.error('Failed to save installed plugin package', {
+      id: pkg.manifest.id,
+      format: pkg.manifest.format,
+      files: Object.keys(files),
+      error,
+    })
+    throw error
+  }
   await loadInstalledPlugins()
   return cached
 }
