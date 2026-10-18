@@ -10,7 +10,7 @@ import type { FxPlugin } from '../../../plugin-sdk'
 
 /** プラグインの置き場（PevenMUI の PackageStore と同じ形。wevocal-lib の本体は PevenMUI に依存しないので、アプリが setPluginStore で渡す） */
 export interface PluginStore {
-  put(id: string, files: Record<string, string | ArrayBuffer>): Promise<void>
+  put(id: string, files: Record<string, string | ArrayBuffer>): Promise<boolean>
   get(id: string, path: string): Promise<ArrayBuffer | null>
   getText(id: string, path: string): Promise<string | null>
   ids(): Promise<string[]>
@@ -46,7 +46,7 @@ export async function fetchPackage(url: string): Promise<PluginPackage> {
 }
 
 /** 導入する（同じ id は置き換える） */
-export async function installPackage(pkg: PluginPackage): Promise<void> {
+export async function installPackage(pkg: PluginPackage): Promise<boolean> {
   if (!store) throw new PluginError('fetch')
   const files: Record<string, string | ArrayBuffer> = { 'manifest.json': JSON.stringify(pkg.manifest), 'processor.js': pkg.processor }
   if (pkg.wasm) files['module.wasm'] = pkg.wasm
@@ -54,8 +54,9 @@ export async function installPackage(pkg: PluginPackage): Promise<void> {
   if (pkg.wam) files['wam.json'] = JSON.stringify(pkg.wam)
   if (pkg.ui) files['ui.html'] = pkg.ui
   if (pkg.source) files['source.txt'] = pkg.source
-  await store.put(pkg.manifest.id, files)
+  const cached = await store.put(pkg.manifest.id, files)
   await loadInstalledPlugins()
+  return cached
 }
 
 /** 削除する */

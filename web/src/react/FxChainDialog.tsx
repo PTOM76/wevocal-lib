@@ -178,9 +178,9 @@ export default function FxChainDialog(p: {
 
   return (
     // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
-    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" width={900} height={640} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 280 }}>
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" width={900} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Box sx={{ display: 'flex', flex: 1, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 0 }}>
           {/* 列にフォーカスがあるとき、Delete で削除、Ctrl+C、Ctrl+V、Ctrl+D でコピー、貼り付け、複製 */}
           <Box
             tabIndex={0}
@@ -300,7 +300,7 @@ export default function FxChainDialog(p: {
               }
             />
           </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
             {adding && <FxAddPicker plugins={plugins} lang={p.lang} onPick={add} onCancel={() => setAdding(false)} labels={{ search: t('fx.search'), none: t('fx.noMatch'), cancel: t('fx.addCancel') }} />}
             {!adding && slot && !plugin && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('fx.missing', { id: slot.plugin })}</Typography>}
             {!adding && slot && plugin && plugin.manifest.id === EQ_ID && (

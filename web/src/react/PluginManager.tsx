@@ -9,11 +9,13 @@ export type PluginManagerKey =
   | 'plugins.intro' | 'plugins.url' | 'plugins.add' | 'plugins.empty' | 'plugins.remove' | 'plugins.confirmTitle' | 'plugins.author' | 'plugins.version' | 'plugins.permissions'
   | 'plugins.permissionsNone' | 'plugins.notice' | 'plugins.install' | 'plugins.cancel' | 'plugins.replace' | 'plugins.update' | 'plugins.updated' | 'plugins.upToDate' | 'plugins.noSource'
   | 'plugins.vst.pick' | 'plugins.vst.notice' | 'plugins.vst.warning' | 'plugins.vst.load' | 'plugins.vst.loadHeavy' | 'plugins.error.fetch' | 'plugins.error.vst' | 'plugins.error.wam' | 'plugins.error.manifest' | 'plugins.error.api' | 'plugins.error.kind' | 'plugins.error.format' | 'plugins.error.id' | 'plugins.error.processor' | 'plugins.error.reserved'
+  | 'plugins.warning.folderOnly'
 
 /** エラーを画面の文にする（VST の読み込みの失敗は、理由の詳細を添える） */
 function errorText(t: (key: PluginManagerKey) => string, e: unknown) {
   const base = t(`plugins.error.${e instanceof PluginError ? e.code : 'fetch'}` as PluginManagerKey)
-  return e instanceof PluginError && e.detail ? `${base}（${e.detail}）` : base
+  if (e instanceof PluginError && e.detail) return `${base}（${e.detail}）`
+  return e instanceof Error && e.message ? e.message : base
 }
 
 export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Record<string, string | number>) => string; lang: string; /** 試験的機能の VST（DLL をエミュレーターで動かす）の入口を出すか */ vst?: boolean }) {
@@ -24,6 +26,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   // 確かめている途中のもの（導入を押すまで保存しない）
   // 更新の結果の表示（id ごと）
   const [updated, setUpdated] = useState<Record<string, string>>({})
@@ -42,6 +45,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   const fetchIt = async () => {
     setBusy(true)
     setError('')
+    setWarning('')
     try {
       const u = url.trim()
       // .dll で終わる URL は VST として取り込む（試験的機能がオンのとき）
@@ -58,6 +62,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
     if (!file) return
     setBusy(true)
     setError('')
+    setWarning('')
     try {
       setPending(await vstPackageFromFile(file))
     } catch (e) {
@@ -70,12 +75,15 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
   const install = async () => {
     if (!pending) return
     setBusy(true)
+    setError('')
+    setWarning('')
     try {
-      await installPackage(pending)
+      const cached = await installPackage(pending)
+      if (!cached) setWarning(t('plugins.warning.folderOnly'))
       setPending(null)
       setUrl('')
-    } catch {
-      setError(t('plugins.error.fetch'))
+    } catch (e) {
+      setError(errorText(t, e))
     } finally {
       setBusy(false)
     }
@@ -100,6 +108,7 @@ export default function PluginManager(p: { t: (key: PluginManagerKey, vars?: Rec
           <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{t('plugins.vst.notice')}</Typography>
         </Box>
       )}
+      {warning && <Typography sx={{ fontSize: pevenFont('sm'), color: 'warning.main' }}>{warning}</Typography>}
       {!list.length && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('plugins.empty')}</Typography>}
       {list.map((pl) => (
         <Box key={pl.manifest.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

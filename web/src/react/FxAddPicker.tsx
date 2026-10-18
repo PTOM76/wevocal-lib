@@ -14,7 +14,7 @@ export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPi
     return words.every((w) => hay.includes(w))
   })
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+    <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 1, minWidth: 0, minHeight: 0 }}>
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <InputBase
           autoFocus
@@ -36,7 +36,7 @@ export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPi
         </Button>
       </Box>
       {!hits.length && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{p.labels.none}</Typography>}
-      <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 420, overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
         {hits.map((pl) => (
           <Fragment key={pl.manifest.id}>
             <ButtonBase onClick={() => p.onPick(pl)} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25, px: 1, py: 0.75, borderRadius: 0.5, textAlign: 'left', '&:hover': { bgcolor: 'action.hover' } }}>
