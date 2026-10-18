@@ -20,7 +20,8 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
       return null
     }
     size = vst.editorOpen()
-  } catch {
+  } catch (error) {
+    console.error('Failed to open VST editor', { id: pkg.manifest.id, error })
     return null
   }
   const [w, h] = size
@@ -45,33 +46,34 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
   }
   const keys = (e: PointerEvent, left: boolean) => (left ? 1 : 0) | (e.ctrlKey || e.metaKey ? 2 : 0) | (e.shiftKey ? 4 : 0)
   let last = ''
-  const safe = (f: () => void) => {
+  const safe = (operation: string, f: () => void) => {
     try {
       f()
-    } catch {
+    } catch (error) {
       // エミュレーターが対応していない処理で止まったら、画面を止める（音は別のインスタンスなので影響しない）
+      if (!dead) console.error('VST editor stopped after an emulator error', { id: pkg.manifest.id, operation, error })
       dead = true
     }
   }
   canvas.onpointerdown = (e) => {
     canvas.setPointerCapture(e.pointerId)
     const [x, y] = pos(e)
-    safe(() => vst.editorMouse(0x201, x, y, keys(e, true)))
+    safe('pointer down', () => vst.editorMouse(0x201, x, y, keys(e, true)))
   }
   canvas.onpointermove = (e) => {
     const [x, y] = pos(e)
     if (`${x},${y}` === last) return
     last = `${x},${y}`
-    safe(() => vst.editorMouse(0x200, x, y, keys(e, (e.buttons & 1) === 1)))
+    safe('pointer move', () => vst.editorMouse(0x200, x, y, keys(e, (e.buttons & 1) === 1)))
   }
   canvas.onpointerup = (e) => {
     const [x, y] = pos(e)
-    safe(() => vst.editorMouse(0x202, x, y, keys(e, false)))
+    safe('pointer up', () => vst.editorMouse(0x202, x, y, keys(e, false)))
   }
 
   const timer = setInterval(() => {
     if (dead) return
-    safe(() => {
+    safe('editor idle and render', () => {
       vst.editorIdle()
       const ch = vst.editorChanges()
       for (let i = 0; i + 1 < ch.length; i += 2) {
@@ -96,7 +98,7 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
     },
     update(v) {
       // ホスト側で変わったぶん（リセット、オートメーション、プリセット）だけ画面のつまみへ渡す
-      safe(() =>
+      safe('host parameter update', () =>
         params.forEach((p, i) => {
           const x = v[p.id]
           if (x !== undefined && x !== known[p.id]) {
@@ -109,7 +111,7 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
     dispose() {
       clearInterval(timer)
       canvas.remove()
-      safe(() => {
+      safe('dispose', () => {
         vst.editorClose()
         vst.free()
       })

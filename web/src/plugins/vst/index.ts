@@ -110,6 +110,7 @@ export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<Pl
     vst = new JsVst(new Uint8Array(dll))
   } catch (e) {
     // DLL でない、エミュレーターが対応していない命令や API を使っている、など。理由をそのまま添える
+    console.error('Failed to initialize VST plugin', { fileName, error: e })
     throw new PluginError('vst', e instanceof Error ? e.message : String(e))
   }
   try {
@@ -143,7 +144,8 @@ export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<Pl
     let load: number | undefined
     try {
       load = measureLoad(vst)
-    } catch {
+    } catch (error) {
+      console.warn('Failed to measure VST plugin load; continuing without an estimate', { id, name, error })
       load = undefined
     }
     return { manifest, processor: makeProcessor(id, params.map((p) => p.id), params.map((p) => p.default)), wasm, dll, load }
