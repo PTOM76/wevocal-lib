@@ -1,0 +1,3 @@
+[submodule "plugin-sdk"]
+	path = plugin-sdk
+	url = git@github.com:PTOM76/wevocal-plugin-sdk.git
