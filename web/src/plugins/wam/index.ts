@@ -6,8 +6,25 @@ import { createWam, getParams, paramInfo, setParams, type WamInstance, type WamN
 import type { PluginPackage } from '../external'
 import type { FxPlugin, GuiHandle, GuiState, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
 
+const WAM_SAMPLE_RATE = 48000
+const MAX_COMPENSATION_SECONDS = 1
+
 /** id に使える形にする */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wam'
+
+/** WAM API は秒を返すが、実装によってはサンプル数を返す。遅延補正ノードの上限を超えない値にする */
+function compensationSamples(delay: number, sampleRate: number) {
+  if (!Number.isFinite(delay) || delay <= 0) return 0
+  const samples = Number.isInteger(delay) && delay > 1 ? delay : delay * sampleRate
+  return Math.round(Math.min(samples, sampleRate * MAX_COMPENSATION_SECONDS))
+}
+
+/** 以前、サンプル数を秒として扱って保存した WAM の遅延値を読み込み時に直す */
+function normalizeWamManifest(manifest: PluginManifest): PluginManifest {
+  const latency = manifest.latency ?? 0
+  if (latency <= WAM_SAMPLE_RATE) return manifest
+  return { ...manifest, latency: Math.min(WAM_SAMPLE_RATE, Math.round(latency / WAM_SAMPLE_RATE)) }
+}
 
 /** URL（モジュールの JS）から、導入するパッケージを作る。読み込めない、FX でない WAM は PluginError */
 export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
@@ -25,7 +42,7 @@ export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
     if (d.isInstrument || d.hasAudioInput === false) throw new PluginError('kind')
     const name = d.name || abs.split('/').slice(-2, -1)[0] || 'WAM'
     const info = await paramInfo(inst.audioNode)
-    // 遅れ（秒）を教えてくれる WAM は、サンプルにして控える（WamNode のみ）
+    // SDK は秒を返すが、互換性のためサンプル数を返す実装も受け入れる
     const delay = (await inst.audioNode.getCompensationDelay?.().catch(() => 0)) ?? 0
     const lang: Record<string, Record<string, string>> = { ja_jp: { name }, en_us: { name } }
     const params: ParamDef[] = []
@@ -57,7 +74,7 @@ export async function wamPackageFromUrl(url: string): Promise<PluginPackage> {
       name: 'name',
       // WAM のコードはこのページのスレッドでも動く（読み込みと画面の部分）ので、隔離されないことを権限として見せる
       permissions: ['main-thread'],
-      ...(delay > 0 ? { latency: Math.round(delay * ctx.sampleRate) } : {}),
+      ...(delay > 0 ? { latency: compensationSamples(delay, ctx.sampleRate) } : {}),
       params,
       lang,
     }
@@ -154,22 +171,23 @@ class WamFx extends FxBase {
 
 /** パッケージから FX プラグインを作る */
 export function makeWamPlugin(pkg: PluginPackage): FxPlugin {
+  const normalized = { ...pkg, manifest: normalizeWamManifest(pkg.manifest) }
   return {
-    manifest: pkg.manifest,
-    lang: pkg.manifest.lang ?? {},
+    manifest: normalized.manifest,
+    lang: normalized.manifest.lang ?? {},
     preload: async (ctx) => {
       let map = pool.get(ctx)
       if (!map) pool.set(ctx, (map = new Map()))
-      const list = map.get(pkg.manifest.id) ?? []
+      const list = map.get(normalized.manifest.id) ?? []
       // 1 つだけ先に作る（同じ WAM を複数の列に入れたぶんは、できるまで素通し）
       if (!list.length) {
-        const inst = await createWam(ctx, pkg.wam!.url).catch(() => null)
+        const inst = await createWam(ctx, normalized.wam!.url).catch(() => null)
         if (inst) list.push(inst)
       }
-      map.set(pkg.manifest.id, list)
+      map.set(normalized.manifest.id, list)
     },
-    create: (ctx, values, host, on = true, state) => new WamFx(ctx, pkg, host, state).init(values, on),
-    mountGui: (el, values, onChange, state) => mountWamGui(pkg, el, values, onChange, state),
+    create: (ctx, values, host, on = true, state) => new WamFx(ctx, normalized, host, state).init(values, on),
+    mountGui: (el, values, onChange, state) => mountWamGui(normalized, el, values, onChange, state),
   }
 }
 
