@@ -103,7 +103,10 @@ async function readInstalled(): Promise<void> {
       const text = await store.getText(id, 'manifest.json')
       const processor = await store.getText(id, 'processor.js')
       const manifest = text ? validateManifest(JSON.parse(text), true) : null
-      if (!manifest || (!processor && manifest.format !== 'wam')) continue
+      if (!manifest || (!processor && manifest.format !== 'wam')) {
+        if (id.startsWith('vst.')) console.warn('Skipping incomplete installed VST plugin', { id, hasManifest: !!manifest, hasProcessor: !!processor })
+        continue
+      }
       if (manifest.format === 'wam') {
         const wam = JSON.parse((await store.getText(id, 'wam.json')) ?? 'null') as PluginPackage['wam'] | null
         if (wam && manifest.kind === 'fx') list.push(makeWamPlugin({ manifest, processor: '', wam }))
@@ -117,8 +120,8 @@ async function readInstalled(): Promise<void> {
       if (manifest.kind === 'tool' || manifest.kind === 'analyzer') tools.push({ manifest, lang: manifest.lang ?? {}, pkg })
       else if (manifest.kind === 'instrument') instruments.push({ manifest, lang: manifest.lang ?? {}, pkg, sample: manifest.params.some((d) => d.id === 'sample') })
       else list.push(makeExternalPlugin(pkg))
-    } catch {
-      // 壊れたものは飛ばす
+    } catch (e) {
+      if (id.startsWith('vst.')) console.error('Failed to load installed VST plugin', { id, error: e })
     }
   }
   setInstalledTools(tools.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id)))
