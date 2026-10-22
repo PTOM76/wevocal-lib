@@ -18,6 +18,7 @@ export interface WamNodeLike extends AudioNode {
   getParameterInfo?(...ids: string[]): Promise<Record<string, WamParamInfo>>
   getParameterValues?(normalized: boolean, ...ids: string[]): Promise<Record<string, { id: string; value: number }>>
   setParameterValues?(updates: Record<string, { id: string; value: number; normalized: boolean }>): Promise<void>
+  scheduleEvents?(...events: { type: string; time?: number; data?: unknown }[]): Promise<void>
   getCompensationDelay?(): Promise<number>
   getState?(): Promise<unknown>
   setState?(state: unknown): Promise<void>

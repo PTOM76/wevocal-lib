@@ -12,6 +12,7 @@ import { pitchPlugin } from './pitch'
 import { reverbPlugin } from './reverb'
 import { sidechainPlugin } from './sidechain'
 import { installedPlugins, pluginsVersion } from './registry'
+import { isTransportAware, type Transport } from './transport'
 import { templatePlugin } from '../../../plugin-sdk/template'
 import type { FxInstance, FxPlugin, FxSlot, HostInfo, PluginManifest } from '../../../plugin-sdk'
 
@@ -79,6 +80,8 @@ export interface FxChain {
   output: AudioNode
   /** 同じ並びなら値だけを変える。並びや数が変わったら作り直す（input と output は同じまま） */
   update(slots: FxSlot[]): void
+  /** 曲の位置を伝える（位置に合わせて動くプラグインのため。伝えたあとに作られる項目にも渡す。再生位置を変えたときにも呼ぶ） */
+  setTransport(t: Transport): void
   /** デバッグ表示に出す、項目ごとの「プラグインの id 状態」（入っていない、書き出し専用で素通しのものは pass） */
   describe(): string[]
   dispose(): void
@@ -100,6 +103,7 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
   const output = ctx.createGain()
   let current: (FxInstance | null)[] = []
   let key = ''
+  let transport: Transport | null = null
   /** 項目のプラグインの id（デバッグ表示） */
   let shapeIds: string[] = []
   /** サイドチェーンにつないだ音（項目ごと。つなぎ直すときに外す） */
@@ -129,6 +133,7 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
     })
     scTaps = []
     scSources = []
+    if (transport) for (const n of current) if (isTransportAware(n)) n.setTransport(transport)
     for (const [i, s] of list.entries()) connectSidechain(i, s.sidechain)
     let last: AudioNode = input
     for (const n of current) {
@@ -165,6 +170,10 @@ export function createFxChain(ctx: BaseAudioContext, slots: FxSlot[], host: Host
         // 音を取る先が変わったとき、まだ存在しなかったトラックが増えたときにつなぎ直す
         if (list[i].sidechain !== scSources[i] || (list[i].sidechain && !scTaps[i])) connectSidechain(i, list[i].sidechain)
       }
+    },
+    setTransport(t) {
+      transport = t
+      for (const n of current) if (isTransportAware(n)) n.setTransport(t)
     },
     describe: () => current.map((n, i) => `${shapeIds[i] ?? '?'} ${n ? (n.status?.() ?? 'on') : 'pass'}`),
     dispose() {

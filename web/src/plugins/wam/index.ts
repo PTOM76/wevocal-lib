@@ -4,6 +4,7 @@ import { FxBase } from '../../../../plugin-sdk/FxBase'
 import { PluginError } from '../validate'
 import { createWam, getParams, paramInfo, setParams, type WamInstance, type WamNodeLike } from './host'
 import type { PluginPackage } from '../external'
+import type { Transport } from '../transport'
 import type { FxPlugin, GuiHandle, GuiState, HostInfo, ParamDef, PluginManifest } from '../../../../plugin-sdk'
 
 const WAM_SAMPLE_RATE = 48000
@@ -95,6 +96,7 @@ class WamFx extends FxBase {
   private latest: Record<string, number> = {}
   private sent: Record<string, number> = {}
   private state?: string
+  private transport: Transport | null = null
   private readonly pkg: PluginPackage
 
   constructor(ctx: BaseAudioContext, pkg: PluginPackage, host: HostInfo, state?: string) {
@@ -125,6 +127,20 @@ class WamFx extends FxBase {
     if (this.state) this.setState(this.state)
     this.src.connect(this.node).connect(this.dst)
     this.send(this.latest)
+    this.sendTransport()
+  }
+
+  /** 曲の位置を伝える（位置に合わせて動く WAM のため。WAM2 の wam-transport。拍子は 4/4 とし、小節の頭を曲の位置 0 にする） */
+  setTransport(t: Transport) {
+    this.transport = t
+    this.sendTransport()
+  }
+
+  private sendTransport() {
+    const t = this.transport
+    if (!t || !this.node?.scheduleEvents) return
+    const data = { currentBar: 0, currentBarStarted: t.zero, tempo: t.bpm, timeSigNumerator: 4, timeSigDenominator: 4, playing: true }
+    void Promise.resolve(this.node.scheduleEvents({ type: 'wam-transport', time: this.ctx.currentTime, data })).catch(() => {})
   }
 
   setState(state: string | undefined) {
