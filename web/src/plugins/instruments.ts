@@ -42,13 +42,15 @@ export interface InstrumentInstance {
   /** 送った音符をすべて取り消し、鳴っている音を離す */
   clear(): void
   setSample(sample: SampleData | null): void
+  /** 音符の高さごとの音（その高さに合わせてあらかじめ作った音。速度を変えずに鳴らす。ない高さは setSample の音の速度を変えて鳴らす） */
+  setSamples(samples: Record<number, SampleData>): void
   dispose(): void
 }
 
 /**
  * 音源の processor の土台（文字列）。音符の列（時刻順）を持ち、サンプル単位で時刻になったものから、startVoice と releaseVoice を呼ぶ。
  * port の受け取り: { __wevocalNotes: [{ time, dur, pitch, vel }] }、{ __wevocalNoteOn: { pitch, vel } }、{ __wevocalNoteOff: { pitch } }、
- * { __wevocalClear: true }、{ __wevocalSample: { channels, sampleRate } }
+ * { __wevocalClear: true }、{ __wevocalSample: { channels, sampleRate } }、{ __wevocalSamples: { 高さ: { channels, sampleRate } } }
  */
 const BASE = `
 class WvInstrument extends AudioWorkletProcessor {
@@ -58,6 +60,7 @@ class WvInstrument extends AudioWorkletProcessor {
     this.queue = []
     this.voices = []
     this.sample = opt.sample || null
+    this.samples = opt.samples || null
     for (const ev of opt.events || []) this.addEvent(ev)
     this.port.onmessage = (e) => {
       const m = e.data
@@ -68,6 +71,7 @@ class WvInstrument extends AudioWorkletProcessor {
         this.queue = []
         for (const v of this.voices) this.releaseVoice(v)
       } else if (m.__wevocalSample) this.sample = m.__wevocalSample
+      else if (m.__wevocalSamples) this.samples = m.__wevocalSamples
     }
   }
   push(ev) {
@@ -179,20 +183,24 @@ class SamplerProcessor extends WvInstrument {
       { name: 'attack', defaultValue: 3, minValue: 0, maxValue: 2000, automationRate: 'k-rate' },
       { name: 'release', defaultValue: 120, minValue: 1, maxValue: 5000, automationRate: 'k-rate' },
       { name: 'loop', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'formant', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'volume', defaultValue: 0, minValue: -48, maxValue: 12, automationRate: 'k-rate' },
     ]
   }
   startVoice(pitch, vel, p) {
-    if (!this.sample) return
+    // その高さに合わせて作った音があれば速度を変えずに、なければ元の音の速度を変えて鳴らす
+    const own = this.samples && this.samples[pitch]
+    const smp = own || this.sample
+    if (!smp) return
     if (this.voices.length >= 16) this.voices.shift()
-    const rate = Math.pow(2, (pitch - p.root[0]) / 12) * (this.sample.sampleRate / sampleRate)
-    this.voices.push({ pitch, rate, vel, pos: 0, env: 0, released: false, done: false })
+    const rate = (own ? 1 : Math.pow(2, (pitch - p.root[0]) / 12)) * (smp.sampleRate / sampleRate)
+    this.voices.push({ pitch, rate, vel, smp, pos: 0, env: 0, released: false, done: false })
   }
   releaseVoice(v) {
     v.released = true
   }
   renderVoice(v, p) {
-    const smp = this.sample
+    const smp = v.smp
     if (!smp) { v.done = true; return [0, 0] }
     const len = smp.channels[0].length
     const atk = Math.max(0.0005, p.attack[0] / 1000)
@@ -262,14 +270,15 @@ const samplerManifest = base(
     { id: 'attack', name: 'param.attack', min: 0, max: 2000, default: 3, step: 1, unit: 'ms' },
     { id: 'release', name: 'param.release', min: 1, max: 5000, default: 120, step: 1, unit: 'ms' },
     { id: 'loop', name: 'param.loop', min: 0, max: 1, default: 0, choices: ['loop.off', 'loop.on'] },
+    { id: 'formant', name: 'param.formant', min: 0, max: 1, default: 0, choices: ['formant.off', 'formant.on'] },
     { id: 'volume', name: 'param.volume', min: -48, max: 12, default: 0, step: 0.5, unit: 'dB' },
   ],
   {
-    ja_jp: { name: 'WevSampler', description: '波形ブロックの音を音色にして、音符の高さに合わせて鳴らします', keywords: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'loop.off': 'しない', 'loop.on': 'する', 'param.volume': '音量' },
-    en_us: { name: 'WevSampler', description: 'Plays a waveform block\'s sound at the pitch of each note.', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'loop.off': 'Off', 'loop.on': 'On', 'param.volume': 'Volume' },
-    ko_kr: { name: 'WevSampler', keywords: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'loop.off': '끄기', 'loop.on': '켜기', 'param.volume': '음량' },
-    zh_cn: { name: 'WevSampler', keywords: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'loop.off': '关', 'loop.on': '开', 'param.volume': '音量' },
-    zh_tw: { name: 'WevSampler', keywords: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'loop.off': '關', 'loop.on': '開', 'param.volume': '音量' },
+    ja_jp: { name: 'WevSampler', description: '波形ブロックの音を音色にして、音符の高さに合わせて鳴らします', keywords: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'loop.off': 'しない', 'loop.on': 'する', 'param.formant': 'フォルマントを保持', 'formant.off': 'しない', 'formant.on': 'する', 'param.volume': '音量' },
+    en_us: { name: 'WevSampler', description: 'Plays a waveform block\'s sound at the pitch of each note.', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'loop.off': 'Off', 'loop.on': 'On', 'param.formant': 'Keep formant', 'formant.off': 'Off', 'formant.on': 'On', 'param.volume': 'Volume' },
+    ko_kr: { name: 'WevSampler', keywords: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'loop.off': '끄기', 'loop.on': '켜기', 'param.formant': '포먼트 유지', 'formant.off': '끄기', 'formant.on': '켜기', 'param.volume': '음량' },
+    zh_cn: { name: 'WevSampler', keywords: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'loop.off': '关', 'loop.on': '开', 'param.formant': '保留共振峰', 'formant.off': '关', 'formant.on': '开', 'param.volume': '音量' },
+    zh_tw: { name: 'WevSampler', keywords: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'loop.off': '關', 'loop.on': '開', 'param.formant': '保留共振峰', 'formant.off': '關', 'formant.on': '開', 'param.volume': '音量' },
   },
 )
 
@@ -292,11 +301,14 @@ export async function preloadInstruments(ctx: BaseAudioContext, ids: Iterable<st
   await Promise.all([...new Set(ids)].map((id) => findInstrument(id) && loadModule(ctx, findInstrument(id)!.pkg)))
 }
 
+/** 高さごとの音を、processor に送る形（channels と sampleRate だけ）にする */
+const sampleMap = (m: Record<number, SampleData>) => Object.fromEntries(Object.entries(m).map(([k, s]) => [k, { channels: s.channels, sampleRate: s.sampleRate }]))
+
 /**
  * 音源を作る。events を渡すと、作った時点から送られた音符になる（書き出しは、レンダリングの前に全部を渡す）。
  * 読み込み済み（preloadInstruments のあと）なら、その場で作る
  */
-export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin, values: Record<string, number>, o: { events?: NoteEvent[]; sample?: SampleData | null } = {}): InstrumentInstance {
+export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin, values: Record<string, number>, o: { events?: NoteEvent[]; sample?: SampleData | null; samples?: Record<number, SampleData> } = {}): InstrumentInstance {
   const pkg = plugin.pkg
   const out = ctx.createGain()
   let node: AudioWorkletNode | null = null
@@ -312,7 +324,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { sampleRate: ctx.sampleRate, events: o.events ?? [], sample: o.sample ? { channels: o.sample.channels, sampleRate: o.sample.sampleRate } : null },
+      processorOptions: { sampleRate: ctx.sampleRate, events: o.events ?? [], sample: o.sample ? { channels: o.sample.channels, sampleRate: o.sample.sampleRate } : null, samples: o.samples ? sampleMap(o.samples) : null },
     })
     node.connect(out)
     node.port.onmessage = (e) => {
@@ -357,6 +369,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
     noteOff: (pitch) => send({ __wevocalNoteOff: { pitch } }),
     clear: () => send({ __wevocalClear: true }),
     setSample: (s) => s && send({ __wevocalSample: { channels: s.channels, sampleRate: s.sampleRate } }),
+    setSamples: (m) => send({ __wevocalSamples: sampleMap(m) }),
     dispose: () => {
       disposed = true
       if (node && ctx instanceof AudioContext) countProcessor(-1)
