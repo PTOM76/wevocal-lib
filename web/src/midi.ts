@@ -1,5 +1,5 @@
 /**
- * 標準 MIDI ファイル（.mid、形式 0 / 1）の読み込み。ピッチに当てはめるための音符（高さと、秒単位の始まり・終わり）だけを取り出す。
+ * 標準 MIDI ファイル（.mid、形式 0 / 1）の読み込みと、書き出し（writeMidi）。ピッチに当てはめるための音符（高さと、秒単位の始まり・終わり）だけを取り出す。
  * テンポの変化（FF 51）はすべてのトラックから集めて、ティックを秒に直すのに使う
  */
 
@@ -148,4 +148,93 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
       notes: tr.notes.map((n) => ({ note: n.note, start: toSec(n.on), end: toSec(n.off), startBeat: perQuarter(n.on), endBeat: perQuarter(n.off), vel: n.vel, ch: n.ch })).sort((a, b) => a.start - b.start),
     })),
   }
+}
+
+export interface MidiWriteNote {
+  /** 始まり・終わり（拍。4 分音符 = 1。0 はファイルの頭） */
+  startBeat: number
+  endBeat: number
+  /** MIDI ノート番号 */
+  note: number
+  /** 強さ 0〜1 */
+  vel: number
+  /** チャンネル 0〜15（省くと 0） */
+  ch?: number
+}
+
+export interface MidiWriteTrack {
+  name: string
+  notes: MidiWriteNote[]
+}
+
+export interface MidiWriteOptions {
+  /** テンポ（拍の位置とそこからの BPM。先頭は拍 0 に置く） */
+  tempos: { beat: number; bpm: number }[]
+  /** 1 小節の拍数（4 分音符の数。分母は 4 分音符） */
+  beatsPerBar: number
+  /** 4 分音符あたりのティック（既定 480） */
+  ppq?: number
+}
+
+const bytes = (...v: number[]) => v
+const be = (n: number, size: number) => Array.from({ length: size }, (_, i) => (n >>> (8 * (size - 1 - i))) & 0xff)
+
+/** 可変長の数値 */
+function varLen(n: number): number[] {
+  let v = Math.max(0, Math.round(n))
+  const out = [v & 0x7f]
+  while ((v >>= 7) > 0) out.unshift((v & 0x7f) | 0x80)
+  return out
+}
+
+interface RawEvent {
+  tick: number
+  /** 同じティックでの順番（メタ、音を離す、音を鳴らすの順） */
+  order: number
+  data: number[]
+}
+
+/** イベントを並べて、時間の差を付けた MTrk にする */
+function trackChunk(events: RawEvent[]): number[] {
+  const body: number[] = []
+  let last = 0
+  for (const e of [...events].sort((a, b) => a.tick - b.tick || a.order - b.order)) {
+    body.push(...varLen(e.tick - last), ...e.data)
+    last = e.tick
+  }
+  body.push(...varLen(0), 0xff, 0x2f, 0x00)
+  return [0x4d, 0x54, 0x72, 0x6b, ...be(body.length, 4), ...body]
+}
+
+const meta = (type: number, data: number[]) => [0xff, type, ...varLen(data.length), ...data]
+
+/**
+ * 標準 MIDI ファイル（形式 1）を作る。最初のトラックにテンポと拍子を書き、そのあとに tracks を 1 つずつ書く。
+ * 同じ音が続くときは、音を離してから鳴らす
+ */
+export function writeMidi(tracks: MidiWriteTrack[], o: MidiWriteOptions): Uint8Array {
+  const ppq = o.ppq ?? 480
+  const tick = (beat: number) => Math.max(0, Math.round(beat * ppq))
+  const text = (s: string) => Array.from(new TextEncoder().encode(s))
+  const head: RawEvent[] = [{ tick: 0, order: 0, data: meta(0x03, text('Tempo')) }]
+  // 拍子: 分子は小節の拍数、分母は 4（2 の 2 乗）
+  head.push({ tick: 0, order: 1, data: meta(0x58, bytes(Math.max(1, Math.round(o.beatsPerBar)), 2, 24, 8)) })
+  for (const tp of o.tempos) {
+    const us = Math.round(60e6 / Math.max(1, tp.bpm))
+    head.push({ tick: tick(tp.beat), order: 2, data: meta(0x51, be(us, 3)) })
+  }
+  const chunks = [trackChunk(head)]
+  for (const tr of tracks) {
+    const ev: RawEvent[] = [{ tick: 0, order: 0, data: meta(0x03, text(tr.name)) }]
+    for (const n of tr.notes) {
+      const on = tick(n.startBeat)
+      const off = Math.max(on + 1, tick(n.endBeat))
+      const ch = (n.ch ?? 0) & 0x0f
+      const note = Math.max(0, Math.min(127, Math.round(n.note)))
+      ev.push({ tick: on, order: 2, data: [0x90 | ch, note, Math.max(1, Math.min(127, Math.round(n.vel * 127)))] })
+      ev.push({ tick: off, order: 1, data: [0x80 | ch, note, 0] })
+    }
+    chunks.push(trackChunk(ev))
+  }
+  return new Uint8Array([0x4d, 0x54, 0x68, 0x64, ...be(6, 4), ...be(1, 2), ...be(chunks.length, 2), ...be(ppq, 2), ...chunks.flat()])
 }

@@ -24,7 +24,7 @@ export { setOutputLimit, limitedOutput, createLimitedOutput } from './outputLimi
 export * from './plugins'
 export { fxEffect, applyFx } from './plugins/fxEffect'
 export { FxBase, clampParam, SMOOTH } from '../../plugin-sdk'
-export { parseMidi, type MidiNote, type MidiTempo, type MidiTrack, type MidiFile } from './midi'
+export { parseMidi, writeMidi, type MidiWriteNote, type MidiWriteTrack, type MidiWriteOptions, type MidiNote, type MidiTempo, type MidiTrack, type MidiFile } from './midi'
 export { NOTE_NAMES, hzToMidi, midiToHz, noteName, describePitch, median } from './notes'
 export { synthesize, PEAK_DB, type Vowel, type Timbre, type SynthNote, type SynthOptions } from './synth'
 export type { FitMode, SamplerNote } from './sampler'
