@@ -9,6 +9,13 @@ export interface MidiNote {
   /** 始まり・終わり（秒） */
   start: number
   end: number
+  /** 始まり・終わり（拍。4 分音符 = 1。ファイルのテンポによらず、音楽上の位置） */
+  startBeat: number
+  endBeat: number
+  /** 強さ 0〜1 */
+  vel: number
+  /** チャンネル 0〜15 */
+  ch: number
 }
 
 export interface MidiTrack {
@@ -16,11 +23,21 @@ export interface MidiTrack {
   notes: MidiNote[]
 }
 
+/** テンポの変化（拍の位置とそこからの BPM） */
+export interface MidiTempo {
+  beat: number
+  bpm: number
+}
+
 export interface MidiFile {
   /** 音符のあるトラックだけ */
   tracks: MidiTrack[]
   /** 最初のテンポ（BPM）。テンポの指定が無ければ 120 */
   bpm: number
+  /** テンポの変化（拍の順。最初のテンポも含む。指定が無ければ空） */
+  tempos: MidiTempo[]
+  /** 最初の拍子（1 小節の拍数を 4 分音符の数で。6/8 なら 3）。指定が無ければ 4 */
+  beatsPerBar: number
 }
 
 /** 可変長の数値と、読み終えた位置 */
@@ -37,6 +54,8 @@ interface RawNote {
   note: number
   on: number
   off: number
+  vel: number
+  ch: number
 }
 
 /** .mid を読む。形式が違えば例外 */
@@ -49,6 +68,7 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
   if (division & 0x8000) throw new Error('SMPTE time division is not supported')
 
   const tempos: { tick: number; usPerQuarter: number }[] = []
+  let beatsPerBar = 0
   const raw: { name: string; notes: RawNote[] }[] = []
   let at = 8 + v.getUint32(4)
   for (let ti = 0; ti < ntrks && at + 8 <= buf.byteLength; ti++) {
@@ -60,7 +80,7 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
     let name = ''
     const notes: RawNote[] = []
     /** 鳴っている音（チャンネルと高さごと）。同じ音が重なったら先に鳴ったものから止める */
-    const open = new Map<number, number[]>()
+    const open = new Map<number, { tick: number; vel: number }[]>()
     while (p < end) {
       const [delta, q] = readVarLen(v, p)
       p = q
@@ -76,6 +96,8 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
         const [len, q2] = readVarLen(v, p)
         p = q2
         if (meta === 0x51 && len === 3) tempos.push({ tick, usPerQuarter: (v.getUint8(p) << 16) | (v.getUint8(p + 1) << 8) | v.getUint8(p + 2) })
+        // 拍子（分子と分母の 2 のべき乗）。最初のものを使い、4 分音符の数にする
+        if (meta === 0x58 && len >= 2 && !beatsPerBar) beatsPerBar = (v.getUint8(p) * 4) / 2 ** v.getUint8(p + 1)
         if (meta === 0x03 && !name) name = new TextDecoder().decode(new Uint8Array(buf, p, len))
         p += len
       } else if (status === 0xf0 || status === 0xf7) {
@@ -87,11 +109,11 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
         p += 2
         if (type === 0x90 && vel > 0) {
           const list = open.get(key) ?? []
-          list.push(tick)
+          list.push({ tick, vel })
           open.set(key, list)
         } else {
           const on = open.get(key)?.shift()
-          if (on !== undefined) notes.push({ note: key & 0xff, on, off: tick })
+          if (on !== undefined) notes.push({ note: key & 0xff, on: on.tick, off: tick, vel: on.vel / 127, ch: key >> 8 })
         }
       } else if (type === 0xc0 || type === 0xd0) p += 1
       else p += 2
@@ -115,12 +137,15 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
     for (const x of segs) if (x.tick <= tick) s = x
     return s.sec + (tick - s.tick) * s.spt
   }
+  const perQuarter = (tick: number) => tick / division
   const firstTempo = tempos.find((tp) => tp.tick === 0) ?? tempos[0]
   return {
+    beatsPerBar: beatsPerBar > 0 ? beatsPerBar : 4,
+    tempos: tempos.map((tp) => ({ beat: perQuarter(tp.tick), bpm: Math.round((60e6 / tp.usPerQuarter) * 100) / 100 })),
     bpm: firstTempo ? Math.round((60e6 / firstTempo.usPerQuarter) * 100) / 100 : 120,
     tracks: raw.map((tr) => ({
       name: tr.name,
-      notes: tr.notes.map((n) => ({ note: n.note, start: toSec(n.on), end: toSec(n.off) })).sort((a, b) => a.start - b.start),
+      notes: tr.notes.map((n) => ({ note: n.note, start: toSec(n.on), end: toSec(n.off), startBeat: perQuarter(n.on), endBeat: perQuarter(n.off), vel: n.vel, ch: n.ch })).sort((a, b) => a.start - b.start),
     })),
   }
 }
