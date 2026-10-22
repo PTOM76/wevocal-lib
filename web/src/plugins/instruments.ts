@@ -4,6 +4,14 @@ import { loadModule, moduleKey, isReady, type PluginPackage } from './external'
 import { processorName, type PluginManifest } from '../../../plugin-sdk'
 
 /** 鳴らす音符（時刻は AudioContext の秒） */
+/** 音源に送る、コントロールチェンジ（cc）とピッチベンド（bend）。値は cc が 0〜1、bend が -1〜1（±2 半音） */
+export interface ControlEvent {
+  time: number
+  kind: 'cc' | 'bend'
+  cc: number
+  value: number
+}
+
 export interface NoteEvent {
   time: number
   /** 長さ（秒）。この長さが過ぎたら離す */
@@ -37,6 +45,8 @@ export interface InstrumentInstance {
   /** 音符を送る（時刻は ctx の秒。過ぎた時刻は、すぐ鳴らす）。先に送っておくと、その時刻に正確に鳴る */
   schedule(events: NoteEvent[]): void
   /** 今すぐ鳴らす、離す（キーボードのモニター） */
+  /** コントロールチェンジとピッチベンドの列を送る（時刻は schedule と同じ）。サステイン（CC64）とピッチベンドを受ける */
+  scheduleControls(events: ControlEvent[]): void
   noteOn(pitch: number, vel: number): void
   noteOff(pitch: number): void
   /** 送った音符をすべて取り消し、鳴っている音を離す */
@@ -50,7 +60,7 @@ export interface InstrumentInstance {
 /**
  * 音源の processor の土台（文字列）。音符の列（時刻順）を持ち、サンプル単位で時刻になったものから、startVoice と releaseVoice を呼ぶ。
  * port の受け取り: { __wevocalNotes: [{ time, dur, pitch, vel }] }、{ __wevocalNoteOn: { pitch, vel } }、{ __wevocalNoteOff: { pitch } }、
- * { __wevocalClear: true }、{ __wevocalSample: { channels, sampleRate } }、{ __wevocalSamples: { 高さ: { channels, sampleRate } } }
+ * { __wevocalControls: [{ time, kind, cc, value }] }、{ __wevocalClear: true }、{ __wevocalSample: { channels, sampleRate } }、{ __wevocalSamples: { 高さ: { channels, sampleRate } } }
  */
 const BASE = `
 class WvInstrument extends AudioWorkletProcessor {
@@ -61,14 +71,21 @@ class WvInstrument extends AudioWorkletProcessor {
     this.voices = []
     this.sample = opt.sample || null
     this.samples = opt.samples || null
+    // サステインペダル（CC64）を踏んでいるか、ピッチベンドの周波数の倍率（±2 半音）
+    this.sus = false
+    this.bendF = 1
     for (const ev of opt.events || []) this.addEvent(ev)
+    for (const ev of opt.controls || []) this.addControl(ev)
     this.port.onmessage = (e) => {
       const m = e.data
       if (m.__wevocalNotes) for (const ev of m.__wevocalNotes) this.addEvent(ev)
+      else if (m.__wevocalControls) for (const ev of m.__wevocalControls) this.addControl(ev)
       else if (m.__wevocalNoteOn) this.push({ t: 0, on: true, pitch: m.__wevocalNoteOn.pitch, vel: m.__wevocalNoteOn.vel })
       else if (m.__wevocalNoteOff) this.push({ t: 0, on: false, pitch: m.__wevocalNoteOff.pitch })
       else if (m.__wevocalClear) {
         this.queue = []
+        this.sus = false
+        this.bendF = 1
         for (const v of this.voices) this.releaseVoice(v)
       } else if (m.__wevocalSample) this.sample = m.__wevocalSample
       else if (m.__wevocalSamples) this.samples = m.__wevocalSamples
@@ -79,6 +96,18 @@ class WvInstrument extends AudioWorkletProcessor {
     let i = this.queue.length
     while (i > 0 && this.queue[i - 1].t > ev.t) i--
     this.queue.splice(i, 0, ev)
+  }
+  addControl(ev) {
+    this.push({ t: ev.time, ctl: true, kind: ev.kind, cc: ev.cc, value: ev.value })
+  }
+  control(ev) {
+    if (ev.kind === 'bend') this.bendF = Math.pow(2, (ev.value * 2) / 12)
+    else if (ev.cc === 64) {
+      const on = ev.value >= 0.5
+      // ペダルを上げたら、離すのを待っていた声を離す
+      if (!on && this.sus) for (const v of this.voices) if (v.held && !v.released) this.releaseVoice(v)
+      this.sus = on
+    }
   }
   addEvent(ev) {
     this.push({ t: ev.time, on: true, pitch: ev.pitch, vel: ev.vel })
@@ -93,8 +122,9 @@ class WvInstrument extends AudioWorkletProcessor {
       const t = currentTime + i / sampleRate
       while (this.queue.length && this.queue[0].t <= t) {
         const ev = this.queue.shift()
-        if (ev.on) this.startVoice(ev.pitch, ev.vel, p)
-        else for (const v of this.voices) if (v.pitch === ev.pitch && !v.released) { this.releaseVoice(v); break }
+        if (ev.ctl) this.control(ev)
+        else if (ev.on) this.startVoice(ev.pitch, ev.vel, p)
+        else for (const v of this.voices) if (v.pitch === ev.pitch && !v.released && !v.held) { if (this.sus) v.held = true; else this.releaseVoice(v); break }
       }
       let l = 0
       let r = 0
@@ -162,8 +192,9 @@ class SynthProcessor extends WvInstrument {
       if (v.env <= 0.0005) { v.done = true; return [0, 0] }
     }
     const det = Math.pow(2, p.detune[0] / 1200)
-    v.ph = (v.ph + v.f / sr) % 1
-    v.ph2 = (v.ph2 + (v.f * det) / sr) % 1
+    const f = v.f * this.bendF
+    v.ph = (v.ph + f / sr) % 1
+    v.ph2 = (v.ph2 + (f * det) / sr) % 1
     let s = (this.osc(p.wave[0], v.ph) + this.osc(p.wave[0], v.ph2)) * 0.5
     // 一次のローパス
     const a = 1 - Math.exp((-2 * Math.PI * Math.min(p.cutoff[0], sr * 0.45)) / sr)
@@ -219,7 +250,7 @@ class SamplerProcessor extends WvInstrument {
     const ch = smp.channels
     const a = ch[0][i] * (1 - f) + ch[0][i + 1] * f
     const b = ch.length > 1 ? ch[1][i] * (1 - f) + ch[1][i + 1] * f : a
-    v.pos += v.rate
+    v.pos += v.rate * this.bendF
     const g = v.env * v.vel * Math.pow(10, p.volume[0] / 20)
     return [a * g, b * g]
   }
@@ -308,7 +339,7 @@ const sampleMap = (m: Record<number, SampleData>) => Object.fromEntries(Object.e
  * 音源を作る。events を渡すと、作った時点から送られた音符になる（書き出しは、レンダリングの前に全部を渡す）。
  * 読み込み済み（preloadInstruments のあと）なら、その場で作る
  */
-export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin, values: Record<string, number>, o: { events?: NoteEvent[]; sample?: SampleData | null; samples?: Record<number, SampleData> } = {}): InstrumentInstance {
+export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin, values: Record<string, number>, o: { events?: NoteEvent[]; controls?: ControlEvent[]; sample?: SampleData | null; samples?: Record<number, SampleData> } = {}): InstrumentInstance {
   const pkg = plugin.pkg
   const out = ctx.createGain()
   let node: AudioWorkletNode | null = null
@@ -324,7 +355,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { sampleRate: ctx.sampleRate, events: o.events ?? [], sample: o.sample ? { channels: o.sample.channels, sampleRate: o.sample.sampleRate } : null, samples: o.samples ? sampleMap(o.samples) : null },
+      processorOptions: { sampleRate: ctx.sampleRate, events: o.events ?? [], controls: o.controls ?? [], sample: o.sample ? { channels: o.sample.channels, sampleRate: o.sample.sampleRate } : null, samples: o.samples ? sampleMap(o.samples) : null },
     })
     node.connect(out)
     node.port.onmessage = (e) => {
@@ -365,6 +396,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
       apply()
     },
     schedule: (events) => events.length && send({ __wevocalNotes: events }),
+    scheduleControls: (events) => events.length && send({ __wevocalControls: events }),
     noteOn: (pitch, vel) => send({ __wevocalNoteOn: { pitch, vel } }),
     noteOff: (pitch) => send({ __wevocalNoteOff: { pitch } }),
     clear: () => send({ __wevocalClear: true }),

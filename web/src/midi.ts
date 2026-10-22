@@ -18,9 +18,23 @@ export interface MidiNote {
   ch: number
 }
 
+/** コントロールチェンジ（cc）とピッチベンド（bend）。値は、cc が 0〜1、bend が -1〜1 */
+export interface MidiControl {
+  /** チャンネル 0〜15 */
+  ch: number
+  kind: 'cc' | 'bend'
+  /** コントロール番号（bend では 0） */
+  cc: number
+  /** 位置（拍。4 分音符 = 1） */
+  beat: number
+  value: number
+}
+
 export interface MidiTrack {
   name: string
   notes: MidiNote[]
+  /** 音符のあるトラックの、コントロールチェンジとピッチベンド（拍の順） */
+  controls: MidiControl[]
 }
 
 /** テンポの変化（拍の位置とそこからの BPM） */
@@ -69,7 +83,7 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
 
   const tempos: { tick: number; usPerQuarter: number }[] = []
   let beatsPerBar = 0
-  const raw: { name: string; notes: RawNote[] }[] = []
+  const raw: { name: string; notes: RawNote[]; controls: { tick: number; ch: number; kind: 'cc' | 'bend'; cc: number; value: number }[] }[] = []
   let at = 8 + v.getUint32(4)
   for (let ti = 0; ti < ntrks && at + 8 <= buf.byteLength; ti++) {
     if (text(at, 4) !== 'MTrk') break
@@ -79,6 +93,7 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
     let status = 0
     let name = ''
     const notes: RawNote[] = []
+    const controls: { tick: number; ch: number; kind: 'cc' | 'bend'; cc: number; value: number }[] = []
     /** 鳴っている音（チャンネルと高さごと）。同じ音が重なったら先に鳴ったものから止める */
     const open = new Map<number, { tick: number; vel: number }[]>()
     while (p < end) {
@@ -115,10 +130,17 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
           const on = open.get(key)?.shift()
           if (on !== undefined) notes.push({ note: key & 0xff, on: on.tick, off: tick, vel: on.vel / 127, ch: key >> 8 })
         }
+      } else if (type === 0xb0) {
+        controls.push({ tick, ch: status & 0x0f, kind: 'cc', cc: v.getUint8(p), value: v.getUint8(p + 1) / 127 })
+        p += 2
+      } else if (type === 0xe0) {
+        // 14 ビット（下位、上位の順）。中央は 8192
+        controls.push({ tick, ch: status & 0x0f, kind: 'bend', cc: 0, value: Math.max(-1, Math.min(1, ((v.getUint8(p + 1) << 7) | v.getUint8(p)) / 8192 - 1)) })
+        p += 2
       } else if (type === 0xc0 || type === 0xd0) p += 1
       else p += 2
     }
-    if (notes.length) raw.push({ name: name.trim() || `Track ${ti + 1}`, notes })
+    if (notes.length) raw.push({ name: name.trim() || `Track ${ti + 1}`, notes, controls })
     at = end
   }
 
@@ -145,6 +167,7 @@ export function parseMidi(buf: ArrayBuffer): MidiFile {
     bpm: firstTempo ? Math.round((60e6 / firstTempo.usPerQuarter) * 100) / 100 : 120,
     tracks: raw.map((tr) => ({
       name: tr.name,
+      controls: tr.controls.map((c) => ({ ch: c.ch, kind: c.kind, cc: c.cc, beat: perQuarter(c.tick), value: c.value })),
       notes: tr.notes.map((n) => ({ note: n.note, start: toSec(n.on), end: toSec(n.off), startBeat: perQuarter(n.on), endBeat: perQuarter(n.off), vel: n.vel, ch: n.ch })).sort((a, b) => a.start - b.start),
     })),
   }
@@ -162,9 +185,21 @@ export interface MidiWriteNote {
   ch?: number
 }
 
+export interface MidiWriteControl {
+  ch?: number
+  kind: 'cc' | 'bend'
+  /** コントロール番号（bend では省く） */
+  cc?: number
+  /** 位置（拍） */
+  beat: number
+  /** cc は 0〜1、bend は -1〜1 */
+  value: number
+}
+
 export interface MidiWriteTrack {
   name: string
   notes: MidiWriteNote[]
+  controls?: MidiWriteControl[]
 }
 
 export interface MidiWriteOptions {
@@ -233,6 +268,14 @@ export function writeMidi(tracks: MidiWriteTrack[], o: MidiWriteOptions): Uint8A
       const note = Math.max(0, Math.min(127, Math.round(n.note)))
       ev.push({ tick: on, order: 2, data: [0x90 | ch, note, Math.max(1, Math.min(127, Math.round(n.vel * 127)))] })
       ev.push({ tick: off, order: 1, data: [0x80 | ch, note, 0] })
+    }
+    for (const c of tr.controls ?? []) {
+      const ch = (c.ch ?? 0) & 0x0f
+      if (c.kind === 'cc') ev.push({ tick: tick(c.beat), order: 1, data: [0xb0 | ch, (c.cc ?? 0) & 0x7f, Math.max(0, Math.min(127, Math.round(c.value * 127)))] })
+      else {
+        const v14 = Math.max(0, Math.min(16383, Math.round((c.value + 1) * 8192)))
+        ev.push({ tick: tick(c.beat), order: 1, data: [0xe0 | ch, v14 & 0x7f, v14 >> 7] })
+      }
     }
     chunks.push(trackChunk(ev))
   }
