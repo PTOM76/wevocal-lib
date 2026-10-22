@@ -221,7 +221,15 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
     inst?.audioNode.destroy?.()
     return null
   }
-  el.appendChild(gui)
+  // 拡大できるように、画面を拡大の枠（stage）に入れる。大きさは、表示してから測る（読み込み中の el は隠れているので、測る間だけ見えない形で出す）
+  const holder = el.ownerDocument.createElement('div')
+  const stage = el.ownerDocument.createElement('div')
+  holder.style.overflow = 'hidden'
+  stage.style.cssText = 'transform-origin:0 0;display:inline-block'
+  stage.appendChild(gui)
+  holder.appendChild(stage)
+  el.appendChild(holder)
+  const size = await measureGui(el, stage)
   const toWam = (v: Record<string, number>) => Object.fromEntries(params.flatMap((p, i) => (v[p.id] === undefined ? [] : [[ids[i], v[p.id]]])))
   const known: Record<string, number> = { ...values }
   // ホストから画面へ渡した値は、画面のインスタンスに届くまで読み戻さない（古い値を読んで書き戻すのを防ぐ）。id → 渡した時刻
@@ -271,6 +279,14 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
     }
   }, 100)
   return {
+    ...(size && {
+      size,
+      setScale(sc: number) {
+        stage.style.transform = `scale(${sc})`
+        holder.style.width = `${Math.round(size[0] * sc)}px`
+        holder.style.height = `${Math.round(size[1] * sc)}px`
+      },
+    }),
     update(v) {
       const diff: Record<string, number> = {}
       for (const p of params) if (v[p.id] !== undefined && v[p.id] !== known[p.id]) {
@@ -283,8 +299,27 @@ async function mountWamGui(pkg: PluginPackage, el: HTMLElement, values: Record<s
       clearInterval(timer)
       clearInterval(stateTimer)
       inst.destroyGui?.(gui)
-      gui.remove()
+      holder.remove()
       inst.audioNode.destroy?.()
     },
+  }
+}
+
+/** WAM の画面の大きさ（px）。作った直後は 0 のことがあるので、1 秒まで待つ。測れなければ null（拡大しない） */
+async function measureGui(el: HTMLElement, stage: HTMLElement): Promise<[number, number] | null> {
+  const win = el.ownerDocument.defaultView ?? window
+  const keep = [el.style.display, el.style.visibility, el.style.position]
+  el.style.display = 'block'
+  el.style.visibility = 'hidden'
+  el.style.position = 'absolute'
+  try {
+    for (let i = 0; i < 60; i++) {
+      const r = stage.getBoundingClientRect()
+      if (r.width > 8 && r.height > 8) return [Math.round(r.width), Math.round(r.height)]
+      await new Promise((res) => win.requestAnimationFrame(res))
+    }
+    return null
+  } finally {
+    ;[el.style.display, el.style.visibility, el.style.position] = keep
   }
 }
