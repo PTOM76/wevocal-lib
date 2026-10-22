@@ -5,6 +5,9 @@ import { pevenFont } from 'pevenmui'
 import type { FxPlugin } from '../../../plugin-sdk'
 import { fxDescription, fxText } from '../plugins/host'
 
+// タッチ端末では、開いただけで画面のキーボードが出ないよう、自動でフォーカスしない
+const finePointer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches
+
 export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPick: (plugin: FxPlugin) => void; onCancel: () => void; labels: { search: string; none: string; cancel: string } }) {
   const [q, setQ] = useState('')
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean)
@@ -17,7 +20,7 @@ export default function FxAddPicker(p: { plugins: FxPlugin[]; lang: string; onPi
     <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 1, minWidth: 0, minHeight: 0 }}>
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <InputBase
-          autoFocus
+          autoFocus={finePointer}
           fullWidth
           value={q}
           onChange={(e) => setQ(e.target.value)}
