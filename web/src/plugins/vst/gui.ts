@@ -1,5 +1,5 @@
 // VST 自身の画面（DLL が描く画面）を FX のダイアログに出す。音を出す側（worklet）とは別に、画面用のエミュレーターを 1 つ動かして canvas に映し、
-// マウスの操作を渡す。画面でつまみを動かしたら onChange で返し、ホストの値が変わったら画面のつまみへ渡す。画面を持たない DLL は null
+// マウスの操作を渡す。画面でつまみを動かしたら onChange で返し、ホストの値が変わったら画面のつまみへ渡す。画面を持たない DLL は null。閉じた画面はいくつか開いたまま残し、次に開くときに使い回す
 import type { GuiHandle } from '../../../../plugin-sdk'
 import type { PluginPackage } from '../external'
 import { loadBridge } from './bridge'
@@ -7,29 +7,78 @@ import { JsVst } from './vstbridge.js'
 
 /** 画面を描き直す間隔（ミリ秒） */
 const FRAME_MS = 33
+/** 閉じた画面を開いたまま残しておく数。次に開くときに DLL の立ち上げ直しを省く */
+const KEEP_MAX = 4
+/** 閉じた画面を使わないまま残しておく時間（ミリ秒）。過ぎたら閉じてメモリを返す */
+const KEEP_MS = 5 * 60 * 1000
+
+type Editor = { id: string; vst: JsVst; size: Int32Array; timer?: ReturnType<typeof setTimeout> }
+/** 閉じた画面（古い順） */
+const idle: Editor[] = []
+
+function release(e: Editor) {
+  clearTimeout(e.timer)
+  try {
+    e.vst.editorClose()
+    e.vst.free()
+  } catch (error) {
+    console.error('Failed to close VST editor', { id: e.id, error })
+  }
+}
+
+/** 残してある画面を使う。無ければ DLL を読み込んで開く。画面を持たない DLL は null */
+function take(pkg: PluginPackage): Editor | null {
+  const id = pkg.manifest.id
+  const i = idle.findIndex((e) => e.id === id)
+  if (i >= 0) {
+    const e = idle.splice(i, 1)[0]
+    clearTimeout(e.timer)
+    return e
+  }
+  const vst = new JsVst(new Uint8Array(pkg.dll!))
+  if (!vst.hasEditor()) {
+    vst.free()
+    return null
+  }
+  return { id, vst, size: vst.editorOpen() }
+}
+
+/** 閉じた画面を残す。上限を超えたら古いものから閉じ、しばらく使わなければそれも閉じる */
+function keep(e: Editor) {
+  e.timer = setTimeout(() => {
+    const i = idle.indexOf(e)
+    if (i >= 0) release(idle.splice(i, 1)[0])
+  }, KEEP_MS)
+  idle.push(e)
+  while (idle.length > KEEP_MAX) release(idle.shift()!)
+}
+
+/** 残してある画面をすべて閉じる（プロジェクトを閉じたときなど） */
+export function releaseVstGuis() {
+  idle.splice(0).forEach(release)
+}
 
 export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: Record<string, number>, onChange: (id: string, value: number) => void): Promise<GuiHandle | null> {
   if (!pkg.dll) return null
   await loadBridge()
-  let vst: JsVst
-  let size: Int32Array
+  let editor: Editor | null
   try {
-    vst = new JsVst(new Uint8Array(pkg.dll))
-    if (!vst.hasEditor()) {
-      vst.free()
-      return null
-    }
-    size = vst.editorOpen()
+    editor = take(pkg)
   } catch (error) {
     console.error('Failed to open VST editor', { id: pkg.manifest.id, error })
     return null
   }
+  if (!editor) return null
+  const kept = editor
+  const { vst, size } = kept
   const [w, h] = size
   const params = pkg.manifest.params
   const known: Record<string, number> = { ...values }
   params.forEach((p, i) => {
     if (values[p.id] !== undefined) vst.setParam(i, values[p.id])
   })
+  // 前に開いていたときに溜まった変更は捨てる
+  vst.editorChanges()
 
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -111,10 +160,9 @@ export async function mountVstGui(pkg: PluginPackage, el: HTMLElement, values: R
     dispose() {
       clearInterval(timer)
       canvas.remove()
-      safe('dispose', () => {
-        vst.editorClose()
-        vst.free()
-      })
+      // 止まった画面は残さない
+      if (dead) release(kept)
+      else keep(kept)
     },
   }
 }
