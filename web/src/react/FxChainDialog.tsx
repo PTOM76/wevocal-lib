@@ -1,7 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
-import { ContextMenu, PresetMenu, WindowDialog, pevenFont, type Preset } from 'pevenmui'
+import { ContextMenu, PresetMenu, WindowDialog, pevenFont, useMobileLayout, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxDescription, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
@@ -55,6 +55,8 @@ export default function FxChainDialog(p: {
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
   onClose: () => void
 }) {
+  // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
+  const mobile = useMobileLayout()
   const t = p.t
   // 導入したプラグインが増減したら描き直す
   useSyncExternalStore(subscribePlugins, pluginsVersion)
@@ -178,7 +180,7 @@ export default function FxChainDialog(p: {
 
   return (
     // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
-    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" width={900} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" dockable={!mobile} width={900} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Box sx={{ display: 'flex', flex: 1, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 0 }}>
           {/* 列にフォーカスがあるとき、Delete で削除、Ctrl+C、Ctrl+V、Ctrl+D でコピー、貼り付け、複製 */}
