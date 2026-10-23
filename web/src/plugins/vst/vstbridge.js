@@ -208,6 +208,13 @@ export class JsVst {
         return v2;
     }
     /**
+     * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
+     * @param {boolean} on
+     */
+    setJit(on) {
+        wasm.jsvst_setJit(this.__wbg_ptr, on);
+    }
+    /**
      * @param {number} index
      * @param {number} value
      */

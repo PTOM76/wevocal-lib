@@ -47,6 +47,10 @@ export class JsVst {
      * 入力（チャンネルごとの Float32Array を並べた配列）を通し、出力（同じ形）を返す
      */
     process(input: Float32Array[], frames: number): Float32Array[];
+    /**
+     * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
+     */
+    setJit(on: boolean): void;
     setParam(index: number, value: number): void;
     /**
      * 32 ビットの DLL か
@@ -85,6 +89,7 @@ export interface InitOutput {
     readonly jsvst_numParams: (a: number) => number;
     readonly jsvst_paramName: (a: number, b: number) => [number, number, number, number];
     readonly jsvst_process: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly jsvst_setJit: (a: number, b: number) => void;
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
