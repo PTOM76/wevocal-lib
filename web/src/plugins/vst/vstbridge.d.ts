@@ -5,6 +5,10 @@ export class JsVst {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * jitMisses のために数え始める（調査用。数えると遅くなる）
+     */
+    countJitMisses(): void;
+    /**
      * 画面でつまみを変えた分。[index, 値, index, 値, …]
      */
     editorChanges(): Float32Array;
@@ -34,6 +38,10 @@ export class JsVst {
      * JIT で実行した命令の割合（調査用。0..1）
      */
     jitCoverage(): number;
+    /**
+     * JIT が有効なのにインタープリターで動かしたブロックの先頭の命令（多い順に "回数 命令" の行。調査用。先に countJitMisses）
+     */
+    jitMisses(): string;
     name(): string;
     /**
      * DLL のバイト列から読み込む（32 ビットも 64 ビットも）
@@ -72,6 +80,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_jsvst_free: (a: number, b: number) => void;
     readonly jitSelftest: (a: number) => [number, number, number];
+    readonly jsvst_countJitMisses: (a: number) => void;
     readonly jsvst_editorChanges: (a: number) => [number, number];
     readonly jsvst_editorClose: (a: number) => [number, number];
     readonly jsvst_editorFrame: (a: number) => [number, number];
@@ -82,6 +91,7 @@ export interface InitOutput {
     readonly jsvst_hasEditor: (a: number) => number;
     readonly jsvst_is32bit: (a: number) => number;
     readonly jsvst_jitCoverage: (a: number) => number;
+    readonly jsvst_jitMisses: (a: number) => [number, number];
     readonly jsvst_name: (a: number) => [number, number, number, number];
     readonly jsvst_new: (a: number, b: number) => [number, number, number];
     readonly jsvst_numInputs: (a: number) => number;

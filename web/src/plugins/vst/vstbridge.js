@@ -12,6 +12,12 @@ export class JsVst {
         wasm.__wbg_jsvst_free(ptr, 0);
     }
     /**
+     * jitMisses のために数え始める（調査用。数えると遅くなる）
+     */
+    countJitMisses() {
+        wasm.jsvst_countJitMisses(this.__wbg_ptr);
+    }
+    /**
      * 画面でつまみを変えた分。[index, 値, index, 値, …]
      * @returns {Float32Array}
      */
@@ -109,6 +115,22 @@ export class JsVst {
     jitCoverage() {
         const ret = wasm.jsvst_jitCoverage(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * JIT が有効なのにインタープリターで動かしたブロックの先頭の命令（多い順に "回数 命令" の行。調査用。先に countJitMisses）
+     * @returns {string}
+     */
+    jitMisses() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.jsvst_jitMisses(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * @returns {string}
