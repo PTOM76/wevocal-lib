@@ -20,6 +20,8 @@ export interface HistoryStore<S> {
   replacePresent: (update: (present: S) => S) => void
   /** 続けての変更のまとまりを切る */
   endMerge: () => void
+  /** merge の続けての変更を、まとめて取り消す（ドラッグ中の Esc）。始める前の状態に戻る。取り消すものがなければ false */
+  cancelMerge: (merge: string) => boolean
   undo: () => void
   redo: () => void
   /** 全部の段（古い順）の index 番目へ行く */
@@ -34,6 +36,8 @@ export interface HistoryStore<S> {
 export function createHistoryStore<S>(initial: S, limit: () => number): HistoryStore<S> {
   let state = newHistory(initial)
   let lastMerge: string | null = null
+  // 今の merge の続きを始める前の状態（cancelMerge で戻る先）
+  let mergeBase: History<S> | null = null
   const listeners = new Set<() => void>()
   const set = (next: History<S>) => {
     if (next === state) return
@@ -49,9 +53,11 @@ export function createHistoryStore<S>(initial: S, limit: () => number): HistoryS
     },
     commit(update, merge) {
       const merged = merge !== undefined && merge === lastMerge
+      if (!merged) mergeBase = null
       lastMerge = merge ?? null
       const next = update(state.present, merged)
       if (next === state.present) return
+      mergeBase ??= state
       set(commitHistory(state, next, limit(), merged))
     },
     replacePresent(update) {
@@ -60,21 +66,34 @@ export function createHistoryStore<S>(initial: S, limit: () => number): HistoryS
     },
     endMerge() {
       lastMerge = null
+      mergeBase = null
+    },
+    cancelMerge(merge) {
+      const base = mergeBase
+      if (merge !== lastMerge || !base) return false
+      lastMerge = null
+      mergeBase = null
+      set(base)
+      return true
     },
     undo() {
       lastMerge = null
+      mergeBase = null
       set(undoHistory(state))
     },
     redo() {
       lastMerge = null
+      mergeBase = null
       set(redoHistory(state))
     },
     goto(index) {
       lastMerge = null
+      mergeBase = null
       set(gotoHistory(state, index))
     },
     reset(present) {
       lastMerge = null
+      mergeBase = null
       set(newHistory(present))
     },
     begin() {

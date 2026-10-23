@@ -74,6 +74,41 @@ describe('undo、redo、goto、reset', () => {
   })
 })
 
+describe('cancelMerge', () => {
+  it('続けた変更をまとめて取り消し、前にあった未来も戻る', () => {
+    const s = make()
+    s.commit((n) => n + 1)
+    s.commit((n) => n + 1)
+    s.undo()
+    const before = s.get()
+    s.commit((n) => n + 10, 'drag')
+    s.commit((n) => n + 10, 'drag')
+    expect(s.cancelMerge('drag')).toBe(true)
+    expect(s.get()).toBe(before)
+  })
+
+  it('1 度も変えていない merge や、別のキー、終わった merge は取り消さない', () => {
+    const s = make()
+    s.commit((n) => n + 1)
+    s.commit((n) => n, 'drag')
+    expect(s.cancelMerge('drag')).toBe(false)
+    s.commit((n) => n + 1, 'other')
+    expect(s.cancelMerge('drag')).toBe(false)
+    s.endMerge()
+    expect(s.cancelMerge('other')).toBe(false)
+    expect(s.get().present).toBe(2)
+  })
+
+  it('始めの変更が空振りでも、あとの変更は取り消せる', () => {
+    const s = make()
+    s.commit((n) => n + 1)
+    s.commit((n) => n, 'drag')
+    s.commit((n) => n + 5, 'drag')
+    expect(s.cancelMerge('drag')).toBe(true)
+    expect(s.get().present).toBe(1)
+  })
+})
+
 describe('replacePresent', () => {
   it('履歴に積まずに今を変える', () => {
     const s = make()
