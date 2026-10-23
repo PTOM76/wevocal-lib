@@ -26,9 +26,18 @@ function release(e: Editor) {
   }
 }
 
+/** 32 ビットの DLL か（PE ヘッダーの Machine が i386）。画面は 32 ビットだけなので、64 ビットは重い読み込みをせずに諦める */
+function isX86(dll: ArrayBuffer): boolean {
+  const v = new DataView(dll)
+  if (v.byteLength < 0x40) return false
+  const pe = v.getUint32(0x3c, true)
+  return pe + 6 <= v.byteLength && v.getUint16(pe + 4, true) === 0x14c
+}
+
 /** 残してある画面を使う。無ければ DLL を読み込んで開く。画面を持たない DLL は null */
 function take(pkg: PluginPackage): Editor | null {
   const id = pkg.manifest.id
+  if (!isX86(pkg.dll!)) return null
   const i = idle.findIndex((e) => e.id === id)
   if (i >= 0) {
     const e = idle.splice(i, 1)[0]
