@@ -28,6 +28,8 @@ export interface HistoryStore<S> {
   goto: (index: number) => void
   /** 履歴を消して、present から始め直す */
   reset: (present: S) => void
+  /** 履歴ごと入れ替える（別の文書に切り替える。元に戻す、やり直すの段もそのまま戻る） */
+  restore: (history: History<S>) => void
   /** トランザクションを始める */
   begin: () => Transaction<S>
 }
@@ -95,6 +97,11 @@ export function createHistoryStore<S>(initial: S, limit: () => number): HistoryS
       lastMerge = null
       mergeBase = null
       set(newHistory(present))
+    },
+    restore(history) {
+      lastMerge = null
+      mergeBase = null
+      set(history)
     },
     begin() {
       lastMerge = null

@@ -74,6 +74,22 @@ describe('undo、redo、goto、reset', () => {
   })
 })
 
+describe('restore', () => {
+  it('履歴ごと入れ替える（段も、未来も戻る）。続けての変更のまとまりは切れる', () => {
+    const a = make()
+    a.commit((n) => n + 1)
+    a.commit((n) => n + 1, 'k')
+    const saved = a.get()
+    a.reset(100)
+    a.restore(saved)
+    expect(a.get()).toBe(saved)
+    a.commit((n) => n + 1, 'k')
+    expect(a.get().past).toEqual([0, 1, 2])
+    a.undo()
+    expect(a.get().present).toBe(2)
+  })
+})
+
 describe('cancelMerge', () => {
   it('続けた変更をまとめて取り消し、前にあった未来も戻る', () => {
     const s = make()
