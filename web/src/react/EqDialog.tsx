@@ -1,6 +1,6 @@
 // トラックのグラフィック EQ の画面（EqPanel）とダイアログ（WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
 import { Box, Button, DialogActions, DialogContent, FormControlLabel, Switch, ToggleButton, Tooltip, ToggleButtonGroup, Typography } from '@mui/material'
-import { WindowDialog, pevenFont, usePalette } from 'pevenmui'
+import { WindowDialog, pevenFont, usePalette, useMobileLayout } from 'pevenmui'
 import { eqRange, flatEq, isFlatEq, resizeEq, setEqRange, type EqBands, type EqRange, type TrackEq } from '../effects/eq'
 import EqGraph from './EqGraph'
 
@@ -67,11 +67,13 @@ export default function EqDialog(p: {
   busy: boolean
   onClose: () => void
 }) {
+  // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
+  const mobile = useMobileLayout()
   const t = p.t
   const eq = p.eq
   return (
     // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
-    <WindowDialog open={p.open} onClose={p.onClose} title={t('eq.title', { name: p.trackName })} name="eq" width={780} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('eq.title', { name: p.trackName })} name="eq" dockable={!mobile} width={780} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent>
         <EqPanel t={t} eq={eq} onChange={p.onChange} />
       </DialogContent>

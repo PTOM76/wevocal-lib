@@ -1,7 +1,7 @@
 // MIDI の音符に並べるダイアログ（サンプラー）（WeVocalSynth と WeVocal Studio で共通。訳文はアプリの t を渡す）
 import { useRef, useState } from 'react'
 import { Box, Button, DialogActions, DialogContent, FormControlLabel, MenuItem, Radio, RadioGroup, Select, Typography } from '@mui/material'
-import { enterToSubmit, NumberInput, SliderRow, WindowDialog, pevenFont } from 'pevenmui'
+import { enterToSubmit, NumberInput, SliderRow, WindowDialog, pevenFont, useMobileLayout } from 'pevenmui'
 import { parseMidi, type MidiFile } from '../midi'
 import type { FitMode, SamplerNote } from '../sampler'
 import { noteName } from '../notes'
@@ -67,6 +67,8 @@ export default function SamplerDialog(p: {
   onClose: () => void
   onRun: (o: SamplerOptions) => void
 }) {
+  // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
+  const mobile = useMobileLayout()
   const t = p.t
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<{ name: string; midi: MidiFile } | null>(null)
@@ -111,6 +113,7 @@ export default function SamplerDialog(p: {
       onClose={p.onClose}
       title={t('sampler.title')}
       name="sampler"
+      dockable={!mobile}
       width={444}
       height={560}
       dialogProps={{ fullWidth: true, maxWidth: 'xs' }}

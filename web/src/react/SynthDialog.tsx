@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { limitedOutput } from '../outputLimit'
 import { Box, Button, Checkbox, DialogActions, DialogContent, FormControlLabel, MenuItem, Radio, RadioGroup, Select, Typography } from '@mui/material'
-import { enterToSubmit, NumberInput, SliderRow, WindowDialog, pevenFont } from 'pevenmui'
+import { enterToSubmit, NumberInput, SliderRow, WindowDialog, pevenFont, useMobileLayout } from 'pevenmui'
 import type { Clip } from '../types'
 import { startContext } from '../playback'
 import { parseMidi, type MidiFile } from '../midi'
@@ -83,6 +83,8 @@ export default function SynthDialog(p: {
   onClose: () => void
   onCreate: (clip: Clip, name: string) => void
 }) {
+  // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
+  const mobile = useMobileLayout()
   const t = p.t
   const input = useRef<HTMLInputElement>(null)
   const [timbre, setTimbre] = useState('voice-a')
@@ -200,6 +202,7 @@ export default function SynthDialog(p: {
       onClose={() => !busy && p.onClose()}
       title={t('synth.title')}
       name="synth"
+      dockable={!mobile}
       width={444}
       height={640}
       dialogProps={{ fullWidth: true, maxWidth: 'xs' }}
