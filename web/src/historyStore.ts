@@ -14,8 +14,8 @@ export interface Transaction<S> {
 export interface HistoryStore<S> {
   get: () => History<S>
   subscribe: (listener: () => void) => () => void
-  /** 今の中身（S）を変える。同じものを返したら何もしない。merge が前と同じなら、履歴を 1 段にまとめる */
-  commit: (update: (present: S) => S, merge?: string) => void
+  /** 今の中身（S）を変える。同じものを返したら何もしない。merge が前と同じなら、履歴を 1 段にまとめる（update の第 2 引数が true） */
+  commit: (update: (present: S, merged: boolean) => S, merge?: string) => void
   /** 履歴に積まずに今を変える（操作ではないもの。プラグインが自分で知らせた状態など）。同じものを返したら何もしない */
   replacePresent: (update: (present: S) => S) => void
   /** 続けての変更のまとまりを切る */
@@ -50,7 +50,7 @@ export function createHistoryStore<S>(initial: S, limit: () => number): HistoryS
     commit(update, merge) {
       const merged = merge !== undefined && merge === lastMerge
       lastMerge = merge ?? null
-      const next = update(state.present)
+      const next = update(state.present, merged)
       if (next === state.present) return
       set(commitHistory(state, next, limit(), merged))
     },

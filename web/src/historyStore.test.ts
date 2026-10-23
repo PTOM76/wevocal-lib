@@ -28,6 +28,17 @@ describe('commit', () => {
     expect(s.get().past).toEqual([0, 3, 4])
   })
 
+  it('update にまとめるかどうかを渡す', () => {
+    const s = make()
+    const seen: boolean[] = []
+    const up = (n: number, merged: boolean) => (seen.push(merged), n + 1)
+    s.commit(up, 'k')
+    s.commit(up, 'k')
+    s.endMerge()
+    s.commit(up, 'k')
+    expect(seen).toEqual([false, true, false])
+  })
+
   it('limit を超えた古い段を捨てる', () => {
     const s = make(2)
     for (let i = 0; i < 5; i++) s.commit((n) => n + 1)
