@@ -230,6 +230,15 @@ export class JsVst {
         return v2;
     }
     /**
+     * JIT で変換しない命令の名前（カンマ区切り、小文字。例 "bts,imul"。JIT の不具合を命令の種類で切り分けるため。調査用）
+     * @param {string} names
+     */
+    setJitDeny(names) {
+        const ptr0 = passStringToWasm0(names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.jsvst_setJitDeny(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
      * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
      * @param {boolean} on
      */

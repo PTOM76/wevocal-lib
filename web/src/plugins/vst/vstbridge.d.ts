@@ -56,6 +56,10 @@ export class JsVst {
      */
     process(input: Float32Array[], frames: number): Float32Array[];
     /**
+     * JIT で変換しない命令の名前（カンマ区切り、小文字。例 "bts,imul"。JIT の不具合を命令の種類で切り分けるため。調査用）
+     */
+    setJitDeny(names: string): void;
+    /**
      * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
      */
     setJit(on: boolean): void;
@@ -100,6 +104,7 @@ export interface InitOutput {
     readonly jsvst_paramName: (a: number, b: number) => [number, number, number, number];
     readonly jsvst_process: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly jsvst_setJit: (a: number, b: number) => void;
+    readonly jsvst_setJitDeny: (a: number, b: number, c: number) => void;
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
