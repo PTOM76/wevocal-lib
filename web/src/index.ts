@@ -18,6 +18,7 @@ export * from './effects/eq'
 export * from './effects/fader'
 // 元に戻す、やり直す（過去、今、未来の状態。React を使わない）
 export { newHistory, commitHistory, undoHistory, redoHistory, gotoHistory, historySteps, type History } from './history'
+export { createHistoryStore, type HistoryStore, type Transaction } from './historyStore'
 export { DEFAULT_SILENCE, findSounds, type SilenceOptions } from './silence'
 export { tempoSegments, segmentAt, bpmAt, beatsIn, nearestBeat, stepBeat, type TempoSegment, type Beat, type BaseTempo, type TempoMarker } from './tempoMap'
 export { toFrames, GAIN_RAMP_SEC, mapGain, gainRange, fadeRange, normalizeRange, finishClip, type FinishOptions } from './clipEdit'
