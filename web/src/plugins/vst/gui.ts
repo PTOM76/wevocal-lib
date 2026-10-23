@@ -26,18 +26,13 @@ function release(e: Editor) {
   }
 }
 
-/** 32 ビットの DLL か（PE ヘッダーの Machine が i386）。画面は 32 ビットだけなので、64 ビットは重い読み込みをせずに諦める */
-function isX86(dll: ArrayBuffer): boolean {
-  const v = new DataView(dll)
-  if (v.byteLength < 0x40) return false
-  const pe = v.getUint32(0x3c, true)
-  return pe + 6 <= v.byteLength && v.getUint16(pe + 4, true) === 0x14c
-}
+/** 試して画面を持たなかった DLL。次からは重い読み込みをしない（入れ直せば別の DLL として試し直す） */
+const noEditor = new WeakSet<ArrayBuffer>()
 
 /** 残してある画面を使う。無ければ DLL を読み込んで開く。画面を持たない DLL は null */
 function take(pkg: PluginPackage): Editor | null {
   const id = pkg.manifest.id
-  if (!isX86(pkg.dll!)) return null
+  if (noEditor.has(pkg.dll!)) return null
   const i = idle.findIndex((e) => e.id === id)
   if (i >= 0) {
     const e = idle.splice(i, 1)[0]
@@ -46,6 +41,7 @@ function take(pkg: PluginPackage): Editor | null {
   }
   const vst = new JsVst(new Uint8Array(pkg.dll!))
   if (!vst.hasEditor()) {
+    noEditor.add(pkg.dll!)
     vst.free()
     return null
   }
