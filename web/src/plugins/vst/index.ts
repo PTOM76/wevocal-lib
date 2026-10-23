@@ -16,7 +16,11 @@ async function sha(bytes: ArrayBuffer): Promise<string> {
   return [...new Uint8Array(d)].slice(0, 6).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** processor のソース（つまみは k-rate の AudioParam。変わったときだけ VST に渡す）。wasm と DLL は processorOptions で受け取る */
+/**
+ * processor のソース（つまみは k-rate の AudioParam。変わったときだけ VST に渡す）。wasm と DLL は processorOptions で受け取る。
+ * 読み込み（new JsVst）は重く（大きい DLL で 20 秒ほど）、その間は音を出すスレッドが止まる。外した processor の VST は置き場に戻し、
+ * 同じ AudioContext で次に作る processor が使い回す（再生を止めるたびにグラフを作り直すので、使い回さないと再生のたびに止まる）
+ */
 function makeProcessor(id: string, ids: string[], defaults: number[]): string {
   const descriptors = JSON.stringify(ids.map((name, i) => ({ name, defaultValue: defaults[i], minValue: 0, maxValue: 1, automationRate: 'k-rate' })))
   const name = 'wevocal-fx-' + id.replace(/[^a-zA-Z0-9]/g, '-')
@@ -30,13 +34,23 @@ class VstProcessor extends AudioWorkletProcessor {
     this.last = new Array(this.ids.length).fill(NaN)
     this.vst = null
     this.failed = false
+    // 置き場は AudioContext の中で共有なので、プラグインごとに分ける
+    const pools = (globalThis.__wevocalVstPool ||= {})
+    const pool = (pools[${JSON.stringify(id)}] ||= [])
     try {
       initSync({ module: o.wasm })
-      this.vst = new JsVst(new Uint8Array(o.dll))
+      this.vst = pool.pop() || new JsVst(new Uint8Array(o.dll))
     } catch (e) {
       this.failed = true
       this.port.postMessage({ __wevocalError: String(e) })
     }
+    // 外されたら、止まっていない VST を置き場に戻す（つまみは次の process で全部渡し直す）
+    this.port.addEventListener('message', (e) => {
+      if (!e.data || !e.data.__wevocalDispose || !this.vst) return
+      if (!this.failed) pool.push(this.vst)
+      this.vst = null
+    })
+    this.port.start()
   }
   process(inputs, outputs, parameters) {
     const out = outputs[0]
