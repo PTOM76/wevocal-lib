@@ -1,6 +1,12 @@
 /* @ts-self-types="./vstbridge.d.ts" */
 
 export class JsVst {
+    static __wrap(ptr) {
+        const obj = Object.create(JsVst.prototype);
+        obj.__wbg_ptr = ptr;
+        JsVstFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
@@ -295,6 +301,63 @@ export class JsVst {
 if (Symbol.dispose) JsVst.prototype[Symbol.dispose] = JsVst.prototype.free;
 
 /**
+ * DLL の読み込みを少しずつ進める（AudioWorklet の中で、音のスレッドを長く止めないため）。
+ * new で置いたあと、step を終わる（true）まで呼び、finish で JsVst にする
+ */
+export class JsVstLoader {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        JsVstLoaderFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_jsvstloader_free(ptr, 0);
+    }
+    /**
+     * 読み込みが終わったものを JsVst にする（この loader は使えなくなる）
+     * @returns {JsVst}
+     */
+    finish() {
+        const ptr = this.__destroy_into_raw();
+        const ret = wasm.jsvstloader_finish(ptr);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return JsVst.__wrap(ret[0]);
+    }
+    /**
+     * DLL を置き、import をつなぐ（命令はまだ動かさない）
+     * @param {Uint8Array} dll
+     */
+    constructor(dll) {
+        const ptr0 = passArray8ToWasm0(dll, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.jsvstloader_new(ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0];
+        JsVstLoaderFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * 命令を最大 budget 個動かして読み込みを進める。終わったら true
+     * @param {number} budget
+     * @returns {boolean}
+     */
+    step(budget) {
+        const ret = wasm.jsvstloader_step(this.__wbg_ptr, budget);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+}
+if (Symbol.dispose) JsVstLoader.prototype[Symbol.dispose] = JsVstLoader.prototype.free;
+
+/**
  * JIT のつなぎ方の確かめ（引数に 42 を足して返す）
  * @param {number} x
  * @returns {number}
@@ -405,6 +468,9 @@ function __wbg_get_imports() {
 const JsVstFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_jsvst_free(ptr, 1));
+const JsVstLoaderFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_jsvstloader_free(ptr, 1));
 
 function addToExternrefTable0(obj) {
     const idx = wasm.__externref_table_alloc();

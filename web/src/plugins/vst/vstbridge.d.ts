@@ -86,6 +86,27 @@ export class JsVst {
 }
 
 /**
+ * DLL の読み込みを少しずつ進める（AudioWorklet の中で、音のスレッドを長く止めないため）。
+ * new で置いたあと、step を終わる（true）まで呼び、finish で JsVst にする
+ */
+export class JsVstLoader {
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * 読み込みが終わったものを JsVst にする（この loader は使えなくなる）
+     */
+    finish(): JsVst;
+    /**
+     * DLL を置き、import をつなぐ（命令はまだ動かさない）
+     */
+    constructor(dll: Uint8Array);
+    /**
+     * 命令を最大 budget 個動かして読み込みを進める。終わったら true
+     */
+    step(budget: number): boolean;
+}
+
+/**
  * JIT のつなぎ方の確かめ（引数に 42 を足して返す）
  */
 export function jitSelftest(x: number): number;
@@ -95,6 +116,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_jsvst_free: (a: number, b: number) => void;
+    readonly __wbg_jsvstloader_free: (a: number, b: number) => void;
     readonly jitSelftest: (a: number) => [number, number, number];
     readonly jsvst_countJitMisses: (a: number) => void;
     readonly jsvst_editorChanges: (a: number) => [number, number];
@@ -121,6 +143,9 @@ export interface InitOutput {
     readonly jsvst_setJitDeny: (a: number, b: number, c: number) => void;
     readonly jsvst_setJitThreshold: (a: number, b: number) => void;
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
+    readonly jsvstloader_finish: (a: number) => [number, number, number];
+    readonly jsvstloader_new: (a: number, b: number) => [number, number, number];
+    readonly jsvstloader_step: (a: number, b: number) => [number, number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export: WebAssembly.Table;

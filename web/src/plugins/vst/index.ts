@@ -18,8 +18,8 @@ async function sha(bytes: ArrayBuffer): Promise<string> {
 
 /**
  * processor のソース（つまみは k-rate の AudioParam。変わったときだけ VST に渡す）。wasm と DLL は processorOptions で受け取る。
- * 読み込み（new JsVst）は重く（大きい DLL で 20 秒ほど）、その間は音を出すスレッドが止まる。外した processor の VST は置き場に戻し、
- * 同じ AudioContext で次に作る processor が使い回す（再生を止めるたびにグラフを作り直すので、使い回さないと再生のたびに止まる）
+ * 読み込み（DllMain、VSTPluginMain など）は重い（大きい DLL で数秒）ので、JsVstLoader で 1 回の process ごとに約 1 ms ずつ進め、終わるまでは素通しにする
+ * （音を出すスレッドを長く止めない）。外した processor の VST は置き場に戻し、同じ AudioContext で次に作る processor が使い回す
  */
 function makeProcessor(id: string, ids: string[], defaults: number[]): string {
   const descriptors = JSON.stringify(ids.map((name, i) => ({ name, defaultValue: defaults[i], minValue: 0, maxValue: 1, automationRate: 'k-rate' })))
@@ -33,20 +33,29 @@ class VstProcessor extends AudioWorkletProcessor {
     this.ids = ${JSON.stringify(ids)}
     this.last = new Array(this.ids.length).fill(NaN)
     this.vst = null
+    this.loader = null
+    // 読み込みを 1 回に進める命令の数（1 回が約 1 ms になるよう、かかった時間で増減する）
+    this.budget = 20000
     this.failed = false
     // 置き場は AudioContext の中で共有なので、プラグインごとに分ける
     const pools = (globalThis.__wevocalVstPool ||= {})
     const pool = (pools[${JSON.stringify(id)}] ||= [])
     try {
       initSync({ module: o.wasm })
-      this.vst = pool.pop() || new JsVst(new Uint8Array(o.dll))
+      this.vst = pool.pop() || null
+      if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
     } catch (e) {
       this.failed = true
       this.port.postMessage({ __wevocalError: String(e) })
     }
     // 外されたら、止まっていない VST を置き場に戻す（つまみは次の process で全部渡し直す）
     this.port.addEventListener('message', (e) => {
-      if (!e.data || !e.data.__wevocalDispose || !this.vst) return
+      if (!e.data || !e.data.__wevocalDispose) return
+      if (this.loader) {
+        this.loader.free()
+        this.loader = null
+      }
+      if (!this.vst) return
       if (!this.failed) pool.push(this.vst)
       this.vst = null
     })
@@ -55,6 +64,7 @@ class VstProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const out = outputs[0]
     const inp = inputs[0]
+    if (this.loader && !this.failed) this.stepLoad()
     if (this.failed || !this.vst) {
       for (let c = 0; c < out.length; c++) if (inp[c]) out[c].set(inp[c])
       return true
@@ -91,6 +101,28 @@ class VstProcessor extends AudioWorkletProcessor {
     for (let c = 0; c < out.length; c++) out[c].set(res[c] ?? res[0])
     return true
   }
+  /** 読み込みを少し進める。終わったら JsVst にする */
+  stepLoad() {
+    try {
+      const t0 = currentTimeMs()
+      const done = this.loader.step(this.budget)
+      const ms = currentTimeMs() - t0
+      if (ms < 0.5) this.budget = Math.min(this.budget * 2, 2000000)
+      else if (ms > 2) this.budget = Math.max(this.budget / 2, 1000)
+      if (done) {
+        this.vst = this.loader.finish()
+        this.loader = null
+      }
+    } catch (e) {
+      this.failed = true
+      this.loader = null
+      this.port.postMessage({ __wevocalError: String(e) })
+    }
+  }
+}
+// AudioWorklet には performance が無いことがあるので、無ければ Date で測る
+function currentTimeMs() {
+  return globalThis.performance ? globalThis.performance.now() : Date.now()
 }
 registerProcessor('${name}', VstProcessor)
 `
