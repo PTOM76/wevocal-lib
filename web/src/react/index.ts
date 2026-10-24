@@ -17,6 +17,7 @@ export { default as MarkerTempoDialog, type MarkerTempoKey } from './MarkerTempo
 export { default as EqDialog, EqPanel, type EqDialogKey } from './EqDialog'
 export { default as FxParams, type FxAutomation } from './FxParams'
 export { default as PluginManager, type PluginManagerCatalogKey, type PluginManagerKey } from './PluginManager'
+export { default as MissingPluginsDialog, type MissingPluginsKey } from './MissingPluginsDialog'
 export { default as PluginUi } from './PluginUi'
 export { default as FxChainDialog, type FxChainDialogKey } from './FxChainDialog'
 export { default as ThemedLevelMeter } from './ThemedLevelMeter'
