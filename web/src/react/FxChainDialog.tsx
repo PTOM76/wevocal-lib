@@ -185,7 +185,7 @@ export default function FxChainDialog(p: {
 
   return (
     // 設定に従って、別の窓（ポップアップ）にも出せる（PevenMUI の WindowDialog）
-    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" dockable={!mobile} width={900} height={560} dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
+    <WindowDialog open={p.open} onClose={p.onClose} title={t('fx.title', { name: p.name })} name="fx" dockable={!mobile} width={900} height={560} fixedHeight dialogProps={{ fullWidth: true, maxWidth: 'md' }}>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Box sx={{ display: 'flex', flex: 1, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, minHeight: 0 }}>
           {/* 列にフォーカスがあるとき、Delete で削除、Ctrl+C、Ctrl+V、Ctrl+D でコピー、貼り付け、複製 */}
