@@ -144,7 +144,8 @@ class WorkletFx extends FxBase {
       numberOfInputs: this.sidechainIn ? 2 : 1,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state },
+      // offline: 書き出しや先に作る描画（OfflineAudioContext）か。VST はそのとき読み込みを少しずつにせず、最初に済ませる（途中が素通しにならないように）
+      processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state, offline: !(this.ctx instanceof AudioContext) },
     })
     this.node = node
     if (this.ctx instanceof AudioContext) {

@@ -18,8 +18,9 @@ async function sha(bytes: ArrayBuffer): Promise<string> {
 
 /**
  * processor のソース（つまみは k-rate の AudioParam。変わったときだけ VST に渡す）。wasm と DLL は processorOptions で受け取る。
- * 読み込み（DllMain、VSTPluginMain など）は重い（大きい DLL で数秒）ので、JsVstLoader で 1 回の process ごとに約 1 ms ずつ進め、終わるまでは素通しにする
- * （音を出すスレッドを長く止めない）。外した processor の VST は置き場に戻し、同じ AudioContext で次に作る processor が使い回す
+ * 読み込み（DllMain、VSTPluginMain など）は重い（大きい DLL で数秒）ので、再生では JsVstLoader で 1 回の process ごとに約 1 ms ずつ進め、終わるまでは素通しにする
+ * （音を出すスレッドを長く止めない）。書き出しや先に作る描画（offline）では、途中が素通しにならないよう最初に読み込みを済ませる。
+ * 外した processor の VST は置き場に戻し、同じ AudioContext で次に作る processor が使い回す
  */
 function makeProcessor(id: string, ids: string[], defaults: number[]): string {
   const descriptors = JSON.stringify(ids.map((name, i) => ({ name, defaultValue: defaults[i], minValue: 0, maxValue: 1, automationRate: 'k-rate' })))
@@ -34,8 +35,11 @@ class VstProcessor extends AudioWorkletProcessor {
     this.last = new Array(this.ids.length).fill(NaN)
     this.vst = null
     this.loader = null
-    // 読み込みを 1 回に進める命令の数（1 回が約 1 ms になるよう、かかった時間で増減する）
-    this.budget = 20000
+    // 読み込みを 1 回に進める命令の数。20 回ぶんの合計の時間で、1 回が約 0.7 ms になるよう増減する
+    // （AudioWorklet には performance が無く、Date は 1 ms 単位なので、1 回ずつは測れない）
+    this.budget = 5000
+    this.loadN = 0
+    this.loadT0 = 0
     this.failed = false
     // 置き場は AudioContext の中で共有なので、プラグインごとに分ける
     const pools = (globalThis.__wevocalVstPool ||= {})
@@ -43,7 +47,8 @@ class VstProcessor extends AudioWorkletProcessor {
     try {
       initSync({ module: o.wasm })
       this.vst = pool.pop() || null
-      if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
+      if (!this.vst && o.offline) this.vst = new JsVst(new Uint8Array(o.dll))
+      else if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
     } catch (e) {
       this.failed = true
       this.port.postMessage({ __wevocalError: String(e) })
@@ -104,11 +109,14 @@ class VstProcessor extends AudioWorkletProcessor {
   /** 読み込みを少し進める。終わったら JsVst にする */
   stepLoad() {
     try {
-      const t0 = currentTimeMs()
+      if (this.loadN === 0) this.loadT0 = currentTimeMs()
       const done = this.loader.step(this.budget)
-      const ms = currentTimeMs() - t0
-      if (ms < 0.5) this.budget = Math.min(this.budget * 2, 2000000)
-      else if (ms > 2) this.budget = Math.max(this.budget / 2, 1000)
+      if (++this.loadN >= 20) {
+        const avg = (currentTimeMs() - this.loadT0) / this.loadN
+        // 0 ms と測れたとき（速すぎる）は 2 倍まで。遅すぎれば割合で減らす
+        this.budget = Math.round(Math.min(200000, Math.max(500, this.budget * Math.min(2, Math.max(0.25, 0.7 / Math.max(avg, 0.05))))))
+        this.loadN = 0
+      }
       if (done) {
         this.vst = this.loader.finish()
         this.loader = null
