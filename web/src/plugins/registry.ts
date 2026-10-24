@@ -61,6 +61,15 @@ export function clearLoad(id: string) {
   if (loads.delete(id)) notifyLoad()
 }
 
+// --- 重いときに自動で素通しにするか（アプリの設定。止まったときと出力が壊れたときは、これによらず素通し） ---
+
+let autoBypass = true
+/** 重いプラグインを自動で素通しにするか */
+export const autoBypassEnabled = () => autoBypass
+export function setAutoBypass(on: boolean) {
+  autoBypass = on
+}
+
 // --- 全体の負荷（ブラウザが測る AudioContext の負荷）で守る。プラグインごとの値は推定なので、素通しにするかは全体の負荷で決める ---
 
 /** 全体の負荷で素通しにできる processor（再生の AudioContext の FX） */
@@ -90,7 +99,7 @@ export const renderLoad = () => totalLoad
 export function reportTotalLoad(load: number) {
   totalLoad = load
   totalStreak = load > TOTAL_LIMIT ? totalStreak + 1 : 0
-  if (totalStreak >= TOTAL_COUNT) {
+  if (autoBypass && totalStreak >= TOTAL_COUNT) {
     totalStreak = 0
     const heaviest = [...guards].filter((g) => g.active() && (g.load() ?? 0) >= SHARE).sort((a, b) => b.load()! - a.load()!)[0]
     heaviest?.bypass()

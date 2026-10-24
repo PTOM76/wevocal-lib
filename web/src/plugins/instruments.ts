@@ -1,5 +1,5 @@
 // 音源のプラグイン（kind: 'instrument'）。MIDI の音符を鳴らして音にする。標準のシンセとサンプラー（processor 方式。外から足すものと同じ仕組み）と、音符の送り方
-import { countProcessor, reportLoad, setOverloaded } from './registry'
+import { autoBypassEnabled, countProcessor, reportLoad, setOverloaded } from './registry'
 import { loadModule, moduleKey, isReady, type PluginPackage } from './external'
 import { processorName, type PluginManifest } from '../../../plugin-sdk'
 
@@ -363,7 +363,7 @@ export function createInstrument(ctx: BaseAudioContext, plugin: InstrumentPlugin
       if (typeof ratio !== 'number' || !(ctx instanceof AudioContext)) return
       reportLoad(pkg.manifest.id, ratio)
       streak = ratio > 0.9 ? streak + 1 : 0
-      if (streak >= 3 && !overloaded) {
+      if (streak >= 3 && !overloaded && autoBypassEnabled()) {
         overloaded = true
         setOverloaded(pkg.manifest.id, true)
         node?.disconnect()

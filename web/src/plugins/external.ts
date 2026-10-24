@@ -1,6 +1,6 @@
 // 外から足したプラグイン（processor 方式）。AudioWorklet のモジュールを読み込み、つまみは AudioParam として渡す
 import { FxBase, SMOOTH } from '../../../plugin-sdk/FxBase'
-import { addLoadGuard, clearLoad, countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
+import { addLoadGuard, autoBypassEnabled, clearLoad, countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
 import { mountVstGui } from './vst/gui'
 import { processorName, type FxPlugin, type HostInfo, type PluginManifest } from '../../../plugin-sdk'
 
@@ -193,7 +193,7 @@ class WorkletFx extends FxBase {
     reportLoad(this.pkg.manifest.id, ratio)
     // 全体の負荷を測れないブラウザでは、このプラグインだけで間に合わないときに素通しにする
     this.streak = ratio > OVERLOAD ? this.streak + 1 : 0
-    if (this.streak >= OVERLOAD_COUNT) this.overload()
+    if (this.streak >= OVERLOAD_COUNT && autoBypassEnabled()) this.overload()
   }
 
   /** 音が途切れ続けるのを避けるため、自動で素通しにする。オフにしてからオンにし直すと、また試す */
