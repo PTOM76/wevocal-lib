@@ -19,7 +19,8 @@ async function sha(bytes: ArrayBuffer): Promise<string> {
 /**
  * processor のソース（つまみは k-rate の AudioParam。変わったときだけ VST に渡す）。wasm と DLL は processorOptions で受け取る。
  * 読み込み（DllMain、VSTPluginMain など）は重い（大きい DLL で数秒）ので、再生では JsVstLoader で 1 回の process ごとに約 1 ms ずつ進め、終わるまでは素通しにする
- * （音を出すスレッドを長く止めない）。書き出しや先に作る描画（offline）では、途中が素通しにならないよう最初に読み込みを済ませる。
+ * （音を出すスレッドを長く止めない）。書き出しや先に作る描画（offline）では、途中が素通しにならないよう最初の process で読み込みを済ませる。
+ * どちらも constructor では読み込まない（Chrome は processor ができるまで画面のスレッドを待たせるので、画面が固まる）。
  * 外した processor の VST は置き場に戻し、同じ AudioContext で次に作る processor が使い回す
  */
 function makeProcessor(id: string, ids: string[], defaults: number[]): string {
@@ -47,8 +48,9 @@ class VstProcessor extends AudioWorkletProcessor {
     try {
       initSync({ module: o.wasm })
       this.vst = pool.pop() || null
-      if (!this.vst && o.offline) this.vst = new JsVst(new Uint8Array(o.dll))
-      else if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
+      // 読み込みは process の中で進める（ここで済ませると、Chrome は processor ができるまで画面のスレッドを待たせる）
+      if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
+      this.offline = !!o.offline
     } catch (e) {
       this.failed = true
       this.port.postMessage({ __wevocalError: String(e) })
@@ -69,7 +71,7 @@ class VstProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const out = outputs[0]
     const inp = inputs[0]
-    if (this.loader && !this.failed) this.stepLoad()
+    if (this.loader && !this.failed) this.stepLoad(this.offline)
     if (this.failed || !this.vst) {
       for (let c = 0; c < out.length; c++) if (inp[c]) out[c].set(inp[c])
       return true
@@ -107,8 +109,15 @@ class VstProcessor extends AudioWorkletProcessor {
     return true
   }
   /** 読み込みを少し進める。終わったら JsVst にする */
-  stepLoad() {
+  stepLoad(all) {
     try {
+      // 書き出しや先に作る描画（offline）は、途中が素通しにならないよう、最初の process で最後まで読み込む（描画のスレッドなので画面は止まらない）
+      if (all) {
+        while (!this.loader.step(1000000)) {}
+        this.vst = this.loader.finish()
+        this.loader = null
+        return
+      }
       if (this.loadN === 0) this.loadT0 = currentTimeMs()
       const done = this.loader.step(this.budget)
       if (++this.loadN >= 20) {
