@@ -1,7 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
-import { ContextMenu, PresetMenu, WindowDialog, pevenFont, useMobileLayout, type Preset } from 'pevenmui'
+import { ContextMenu, PresetMenu, WindowDialog, pevenFont, useMobileLayout, usePanelWidth, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
 import { DEV_PLUGINS, availablePlugins, defaultValues, findPlugin, fxDescription, fxText, isNeutralChain, migrateValues, newSlot } from '../plugins/host'
 import { EQ_ID, eqToSlot, slotToEq } from '../plugins/eq'
@@ -61,6 +61,8 @@ export default function FxChainDialog(p: {
   // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
   const mobile = useMobileLayout()
   const t = p.t
+  // 一覧の幅（右の端の分割バーで変えられ、次回も引き継ぐ）
+  const listPane = usePanelWidth('wevocal.fxListWidth', 240, 180, 480, 'left')
   // 導入したプラグインが増減したら描き直す
   useSyncExternalStore(subscribePlugins, pluginsVersion)
   // 導入したプラグインの負荷と、重くて素通しにしたもの
@@ -194,8 +196,10 @@ export default function FxChainDialog(p: {
               e.preventDefault()
               setMenu({ x: e.clientX, y: e.clientY, i: null })
             }}
-            sx={{ width: { xs: '100%', sm: 240 }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5, outline: 'none' }}
+            sx={{ width: { xs: '100%', sm: listPane.width }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5, outline: 'none', position: 'relative' }}
           >
+            {/* 縦に並べる狭い画面では出さない */}
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{listPane.bar}</Box>
             {!p.slots.length && <Typography sx={{ fontSize: pevenFont('sm'), color: 'text.secondary' }}>{t('fx.empty')}</Typography>}
             {p.slots.map((s, i) => {
               const pl = findPlugin(s.plugin)
