@@ -21,6 +21,7 @@ export { newHistory, commitHistory, undoHistory, redoHistory, gotoHistory, histo
 export { createHistoryStore, type HistoryStore, type Transaction } from './historyStore'
 export { DEFAULT_SILENCE, findSounds, type SilenceOptions } from './silence'
 export { tempoSegments, segmentAt, bpmAt, beatsIn, nearestBeat, stepBeat, type TempoSegment, type Beat, type BaseTempo, type TempoMarker } from './tempoMap'
+export { detectTempoChanges, type AnalyzeTempo, type TempoCandidate, type TempoChangeSection, type TempoChangeSensitivity } from './tempoChange'
 export { toFrames, GAIN_RAMP_SEC, mapGain, gainRange, fadeRange, normalizeRange, finishClip, type FinishOptions } from './clipEdit'
 export { setOutputLimit, limitedOutput, createLimitedOutput } from './outputLimit'
 // WeVocal プラグイン（FX の列。型と基底クラスは plugin-sdk/）
