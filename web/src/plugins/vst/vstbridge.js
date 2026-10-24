@@ -133,6 +133,22 @@ export class JsVst {
         }
     }
     /**
+     * 変換した関数の数と、変換にかかった時間（"数 ms"。調査用）
+     * @returns {string}
+     */
+    jitStats() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.jsvst_jitStats(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @returns {string}
      */
     name() {
@@ -230,6 +246,19 @@ export class JsVst {
         return v2;
     }
     /**
+     * MIDI のメッセージ（status、data1、data2）を送る。次の process のブロックの頭から delta サンプル目に効く
+     * @param {number} status
+     * @param {number} data1
+     * @param {number} data2
+     * @param {number} delta
+     */
+    sendMidi(status, data1, data2, delta) {
+        const ret = wasm.jsvst_sendMidi(this.__wbg_ptr, status, data1, data2, delta);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * JIT で変換しない命令の名前（カンマ区切り、小文字。例 "bts,imul"。JIT の不具合を命令の種類で切り分けるため。調査用）
      * @param {string} names
      */
@@ -237,6 +266,13 @@ export class JsVst {
         const ptr0 = passStringToWasm0(names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.jsvst_setJitDeny(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * 変換を始める実行回数（既定 8。調査用）
+     * @param {number} n
+     */
+    setJitThreshold(n) {
+        wasm.jsvst_setJitThreshold(this.__wbg_ptr, n);
     }
     /**
      * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
@@ -329,6 +365,10 @@ function __wbg_get_imports() {
         },
         __wbg_new_from_slice_ca6ad97db1f4779a: function(arg0, arg1) {
             const ret = new Float32Array(getArrayF32FromWasm0(arg0, arg1));
+            return ret;
+        },
+        __wbg_now_aa4ccb83129e9e55: function() {
+            const ret = Date.now();
             return ret;
         },
         __wbg_prototypesetcall_8b03c01e2c0f8066: function(arg0, arg1, arg2) {

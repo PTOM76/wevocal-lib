@@ -42,6 +42,10 @@ export class JsVst {
      * JIT が有効なのにインタープリターで動かしたブロックの先頭の命令（多い順に "回数 命令" の行。調査用。先に countJitMisses）
      */
     jitMisses(): string;
+    /**
+     * 変換した関数の数と、変換にかかった時間（"数 ms"。調査用）
+     */
+    jitStats(): string;
     name(): string;
     /**
      * DLL のバイト列から読み込む（32 ビットも 64 ビットも）
@@ -56,9 +60,17 @@ export class JsVst {
      */
     process(input: Float32Array[], frames: number): Float32Array[];
     /**
+     * MIDI のメッセージ（status、data1、data2）を送る。次の process のブロックの頭から delta サンプル目に効く
+     */
+    sendMidi(status: number, data1: number, data2: number, delta: number): void;
+    /**
      * JIT で変換しない命令の名前（カンマ区切り、小文字。例 "bts,imul"。JIT の不具合を命令の種類で切り分けるため。調査用）
      */
     setJitDeny(names: string): void;
+    /**
+     * 変換を始める実行回数（既定 8。調査用）
+     */
+    setJitThreshold(n: number): void;
     /**
      * JIT を使うか（ありとなしで出力を比べるため。既定は使う）
      */
@@ -96,6 +108,7 @@ export interface InitOutput {
     readonly jsvst_is32bit: (a: number) => number;
     readonly jsvst_jitCoverage: (a: number) => number;
     readonly jsvst_jitMisses: (a: number) => [number, number];
+    readonly jsvst_jitStats: (a: number) => [number, number];
     readonly jsvst_name: (a: number) => [number, number, number, number];
     readonly jsvst_new: (a: number, b: number) => [number, number, number];
     readonly jsvst_numInputs: (a: number) => number;
@@ -103,8 +116,10 @@ export interface InitOutput {
     readonly jsvst_numParams: (a: number) => number;
     readonly jsvst_paramName: (a: number, b: number) => [number, number, number, number];
     readonly jsvst_process: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly jsvst_sendMidi: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly jsvst_setJit: (a: number, b: number) => void;
     readonly jsvst_setJitDeny: (a: number, b: number, c: number) => void;
+    readonly jsvst_setJitThreshold: (a: number, b: number) => void;
     readonly jsvst_setParam: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
