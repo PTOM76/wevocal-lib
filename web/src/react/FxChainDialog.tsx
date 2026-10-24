@@ -23,6 +23,9 @@ export type FxChainDialogKey =
 
 type Values = Record<string, number>
 
+// 文字のボタンが縦長にならないよう、幅と高さをそろえて正円にする
+const round = { width: 28, height: 28, lineHeight: 1 }
+
 // コピーしたエフェクト（トラックをまたいで貼り付けられるよう、ダイアログの外に持つ）
 let copied: FxSlot | null = null
 
@@ -265,14 +268,14 @@ export default function FxChainDialog(p: {
                   )}
                   {/* ドラッグが使えない画面（タッチ）では、矢印で動かす */}
                   <Box sx={{ display: 'none', '@media (pointer: coarse)': { display: 'flex' } }}>
-                    <IconButton size="small" aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
+                    <IconButton size="small" sx={round} aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
                       ↑
                     </IconButton>
-                    <IconButton size="small" aria-label={t('fx.down')} disabled={i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
+                    <IconButton size="small" sx={round} aria-label={t('fx.down')} disabled={i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
                       ↓
                     </IconButton>
                   </Box>
-                  <IconButton size="small" aria-label={t('fx.remove')} onClick={(e) => stop(e, () => remove(i))}>
+                  <IconButton size="small" sx={round} aria-label={t('fx.remove')} onClick={(e) => stop(e, () => remove(i))}>
                     ×
                   </IconButton>
                 </Box>
