@@ -211,7 +211,11 @@ function measureLoad(vst: JsVst): number {
  * 導入するとき 1 回だけ呼ぶ（つまみの数と名前は DLL ごとに違うので、ここで調べて manifest に固定する）
  */
 export async function vstPackage(dll: ArrayBuffer, fileName: string): Promise<PluginPackage> {
-  const wasm = await loadBridge()
+  return vstPackageWith(await loadBridge(), dll, fileName)
+}
+
+/** 読み込み済みのエミュレーターの wasm（バイト列）を使って作る（vstPackage の中身。テストや Worker から wasm を自分で読むとき） */
+export async function vstPackageWith(wasm: ArrayBuffer, dll: ArrayBuffer, fileName: string): Promise<PluginPackage> {
   let vst: JsVst
   try {
     vst = new JsVst(new Uint8Array(dll))
