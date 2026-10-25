@@ -1,5 +1,5 @@
-// 処理方式の選択ボックス。開いた一覧には説明を付け、閉じているときは名前だけにする（波形ブロックのプロパティ、音源、設定で共通）
-import { ListItemText, MenuItem, TextField } from '@mui/material'
+// 処理方式の選択ボックス（波形ブロックのプロパティ、音源、設定で共通）。一覧の出し方は pevenmui の DescribedSelect
+import { DescribedSelect } from 'pevenmui'
 import { visibleAlgorithms, type Algorithm, type AlgorithmKey } from '../algorithm'
 
 export default function AlgorithmSelect(p: {
@@ -14,22 +14,6 @@ export default function AlgorithmSelect(p: {
   label?: string
   t: (key: AlgorithmKey) => string
 }) {
-  const list = visibleAlgorithms(p.showLegacy, p.keep ?? (p.value ? [p.value] : []))
-  return (
-    <TextField
-      select
-      size="small"
-      fullWidth
-      label={p.label}
-      value={p.value}
-      slotProps={{ select: { renderValue: (v) => { const a = list.find((x) => x.value === v); return a ? p.t(a.label) : '' } } }}
-      onChange={(e) => p.onChange(e.target.value as Algorithm)}
-    >
-      {list.map((a) => (
-        <MenuItem key={a.value} value={a.value}>
-          <ListItemText primary={p.t(a.label)} secondary={p.t(a.hint)} />
-        </MenuItem>
-      ))}
-    </TextField>
-  )
+  const options = visibleAlgorithms(p.showLegacy, p.keep ?? (p.value ? [p.value] : [])).map((a) => ({ value: a.value, label: p.t(a.label), hint: p.t(a.hint) }))
+  return <DescribedSelect label={p.label} value={p.value} options={options} onChange={p.onChange} />
 }
