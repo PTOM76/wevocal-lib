@@ -51,6 +51,7 @@ class VstProcessor extends AudioWorkletProcessor {
       this.vst = pool.pop() || null
       // 読み込みは process の中で進める（ここで済ませると、Chrome は processor ができるまで画面のスレッドを待たせる）
       this.snap = this.vst ? null : o.snap || null
+      this.rs = null
       this.wasm = o.wasm
       if (!this.vst && !this.snap) this.loader = new JsVstLoader(new Uint8Array(o.dll))
       this.dll = o.dll
@@ -66,6 +67,8 @@ class VstProcessor extends AudioWorkletProcessor {
         this.loader.free()
         this.loader = null
       }
+      this.snap = null
+      this.rs = null
       if (!this.vst) return
       if (!this.failed) pool.push(this.vst)
       this.vst = null
@@ -75,7 +78,7 @@ class VstProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const out = outputs[0]
     const inp = inputs[0]
-    if (this.snap && !this.failed) this.restore()
+    if (this.snap && !this.failed) this.restore(this.offline)
     if (this.loader && !this.failed) this.stepLoad(this.offline)
     if (this.failed || !this.vst) {
       for (let c = 0; c < out.length; c++) if (inp[c]) out[c].set(inp[c])
@@ -113,26 +116,38 @@ class VstProcessor extends AudioWorkletProcessor {
     for (let c = 0; c < out.length; c++) out[c].set(res[c] ?? res[0])
     return true
   }
-  /** 写しから戻す。戻せなければ、今までどおり DLL を読み込む */
-  restore() {
+  /**
+   * 写しから戻す。戻せなければ、今までどおり DLL を読み込む。
+   * 再生では 1 回の process で 32 ページ（2 MB）ずつ写す（一度に写すと音を出すスレッドが数十 ms 止まる）。書き出しや先に作る描画（all）は一度に写す
+   */
+  restore(all) {
     const s = this.snap
-    this.snap = null
     try {
-      const b = __vstBridge()
-      const w = b.initSync({ module: this.wasm })
-      // 写しには 0 でないページだけがある。作ったばかりの instance で値のある所（最初の大きさの分）は 0 にしてから、ページを置く
-      const fresh = w.memory.buffer.byteLength
-      if (s.size > fresh) w.memory.grow(Math.ceil((s.size - fresh) / 65536))
-      const mem = new Uint8Array(w.memory.buffer)
-      mem.fill(0, 0, fresh)
-      const data = new Uint8Array(s.data)
-      for (let i = 0; i < s.pages.length; i++) mem.set(data.subarray(i * 65536, (i + 1) * 65536), s.pages[i] * 65536)
-      const t = w.__wbindgen_externrefs
+      if (!this.rs) {
+        const b = __vstBridge()
+        const w = b.initSync({ module: this.wasm })
+        // 写しには 0 でないページだけがある。作ったばかりの instance で値のある所（最初の大きさの分）は 0 にしてから、ページを置く
+        const fresh = w.memory.buffer.byteLength
+        if (s.size > fresh) w.memory.grow(Math.ceil((s.size - fresh) / 65536))
+        const mem = new Uint8Array(w.memory.buffer)
+        mem.fill(0, 0, fresh)
+        this.rs = { b, w, mem, data: new Uint8Array(s.data), i: 0 }
+        if (!all) return
+      }
+      const r = this.rs
+      const end = all ? s.pages.length : Math.min(s.pages.length, r.i + 32)
+      for (; r.i < end; r.i++) r.mem.set(r.data.subarray(r.i * 65536, (r.i + 1) * 65536), s.pages[r.i] * 65536)
+      if (r.i < s.pages.length) return
+      const t = r.w.__wbindgen_externrefs
       if (t.length < s.refs) t.grow(s.refs - t.length)
-      const v = b.JsVst.__wrap(s.ptr)
+      const v = r.b.JsVst.__wrap(s.ptr)
       v.afterRestore()
       this.vst = v
+      this.snap = null
+      this.rs = null
     } catch (e) {
+      this.snap = null
+      this.rs = null
       this.port.postMessage({ __wevocalError: 'restore: ' + String(e) })
       this.loader = new JsVstLoader(new Uint8Array(this.dll))
     }
