@@ -7,6 +7,8 @@
 //!
 //! 息や子音など周期のない部分は一定間隔で切り出し、同じ断片の繰り返しがブザー音にならないよう、
 //! 切り出す位置を少しずつランダムにずらす。
+//!
+//! `shift_map`（Pisol Direct）は、粒を並べる間隔を変えてリサンプルせずにピッチを変える。粒の形は変えないのでフォルマントが動かない。
 
 use crate::{f0, TimeMap};
 use std::f64::consts::PI;
@@ -58,6 +60,17 @@ pub fn stretch_map(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, progres
 
 /// 目印の置き方を選べる `stretch_map`
 pub fn stretch_map_with(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, marking: Marking, progress: &mut dyn FnMut(f64)) -> Vec<Vec<f32>> {
+    run(channels, map, sample_rate, marking, None, progress)
+}
+
+/// 伸縮しながら、リサンプルせずにピッチを変える（Pisol Direct）。`ratio_at` は入力の位置（サンプル）のピッチ比。
+/// 声のある所は、1 周期の粒を形を変えずに 周期 ÷ 比 の間隔で並べ直すので、フォルマントは動かない
+pub fn shift_map(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, ratio_at: &dyn Fn(f64) -> f64, progress: &mut dyn FnMut(f64)) -> Vec<Vec<f32>> {
+    run(channels, map, sample_rate, Marking::Correlation, Some(ratio_at), progress)
+}
+
+/// `stretch_map_with` と `shift_map` の本体。`ratio_at` があれば、声のある所の粒の間隔をピッチ比で変える
+fn run(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, marking: Marking, ratio_at: Option<&dyn Fn(f64) -> f64>, progress: &mut dyn FnMut(f64)) -> Vec<Vec<f32>> {
     let len = channels.first().map_or(0, |c| c.len());
     let out_len = map.out_len;
     if len == 0 || out_len == 0 {
@@ -125,14 +138,27 @@ pub fn stretch_map_with(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, ma
                 }
             }
         }
-        overlap_add(channels, &mut out, &mut wsum, center, tau, m.period);
-        tau += m.period;
+        // ピッチを変えるときは、声のある所の粒を 周期 ÷ 比 の間隔で置く。上げると重なりが増えるので、その分だけ小さくする
+        let (hop, gain) = match ratio_at {
+            Some(r) if m.voiced => {
+                let r = r(t);
+                (m.period / r, (1.0 / r).min(1.0) as f32)
+            }
+            _ => (m.period, 1.0),
+        };
+        overlap_add(channels, &mut out, &mut wsum, center, tau, m.period, gain);
+        tau += hop;
         step += 1;
         if step % 2048 == 0 {
             progress(0.5 + 0.5 * tau / out_len as f64);
         }
     }
 
+    // ピッチを変えたときは窓の合計で割らない（下げたときの粒のすき間を持ち上げない。粒の大きさは gain でそろえてある）
+    if ratio_at.is_some() {
+        progress(1.0);
+        return out;
+    }
     for o in out.iter_mut() {
         for (s, &w) in o.iter_mut().zip(&wsum) {
             *s /= w.max(MIN_WINDOW_SUM);
@@ -142,8 +168,8 @@ pub fn stretch_map_with(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, ma
     out
 }
 
-/// 入力の `center` を中心に2周期分を Hann 窓で切り出し、出力の `at` を中心に足し込む
-fn overlap_add(channels: &[&[f32]], out: &mut [Vec<f32>], wsum: &mut [f32], center: f64, at: f64, period: f64) {
+/// 入力の `center` を中心に2周期分を Hann 窓で切り出し、`gain` 倍して出力の `at` を中心に足し込む
+fn overlap_add(channels: &[&[f32]], out: &mut [Vec<f32>], wsum: &mut [f32], center: f64, at: f64, period: f64, gain: f32) {
     let len = channels[0].len() as i64;
     let out_len = wsum.len() as i64;
     let half = period.round().max(1.0) as i64;
@@ -156,7 +182,7 @@ fn overlap_add(channels: &[&[f32]], out: &mut [Vec<f32>], wsum: &mut [f32], cent
         let w = (0.5 + 0.5 * (PI * d as f64 / half as f64).cos()) as f32;
         wsum[dst as usize] += w;
         for (o, c) in out.iter_mut().zip(channels) {
-            o[dst as usize] += w * c[src as usize];
+            o[dst as usize] += gain * w * c[src as usize];
         }
     }
 }

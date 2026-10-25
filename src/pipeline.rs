@@ -44,6 +44,8 @@ pub enum Algorithm {
     Sola3,
     /// 正弦波モデル（SMS、愛称は Specraw）。できるだけ可逆（往復や重ねた加工で劣化しにくい）。和音や楽器にも使える
     Sms,
+    /// PSOLA でリサンプルせずにピッチを変える（Pisol Direct）。フォルマントを保つときは補正を通さない。伸縮だけ、フォルマントを保たないときは PSOLA 2 と同じ
+    PsolaDirect,
 }
 
 impl Algorithm {
@@ -59,6 +61,7 @@ impl Algorithm {
             8 => Algorithm::Sola2,
             9 => Algorithm::Sola3,
             10 => Algorithm::Sms,
+            11 => Algorithm::PsolaDirect,
             _ => Algorithm::Wsola,
         }
     }
@@ -75,7 +78,7 @@ impl Algorithm {
             Algorithm::PhaseVocoder => pv::stretch(channels, alpha, sr, progress),
             Algorithm::Psola => psola::stretch(channels, alpha, sr, progress),
             Algorithm::Sola => sola::stretch(channels, alpha, sr, progress),
-            Algorithm::Psola2 => psola::stretch_with(channels, alpha, sr, psola::Marking::Correlation, progress),
+            Algorithm::Psola2 | Algorithm::PsolaDirect => psola::stretch_with(channels, alpha, sr, psola::Marking::Correlation, progress),
             Algorithm::Wsola2 => wsola2(channels, alpha, sr, progress),
             Algorithm::PhaseVocoder2 => pv::stretch2(channels, alpha, sr, progress),
             Algorithm::Hpss => hpss::stretch(channels, alpha, sr, progress),
@@ -97,7 +100,7 @@ impl Algorithm {
             Algorithm::PhaseVocoder => pv::stretch_map(channels, map, sr, progress),
             Algorithm::Psola => psola::stretch_map(channels, map, sr, progress),
             Algorithm::Sola => sola::stretch_map(channels, map, sr, progress),
-            Algorithm::Psola2 => psola::stretch_map_with(channels, map, sr, psola::Marking::Correlation, progress),
+            Algorithm::Psola2 | Algorithm::PsolaDirect => psola::stretch_map_with(channels, map, sr, psola::Marking::Correlation, progress),
             Algorithm::Wsola2 => wsola2_map(channels, map, sr, progress),
             Algorithm::PhaseVocoder2 => pv::stretch_map2(channels, map, sr, progress),
             Algorithm::Hpss => hpss::stretch_map(channels, map, sr, progress),
@@ -157,6 +160,12 @@ pub fn process_with_progress(
     };
     let n = channels.len().max(1) as f64;
 
+    // Pisol Direct でフォルマントを保つときは、粒の間隔でピッチを変える（リサンプルしない）
+    if let (Algorithm::PsolaDirect, Formant::Shift(st), true) = (algorithm, formant, pitch) {
+        let map = TimeMap::linear(len, target_len);
+        return direct(channels, &map, sample_rate, &|_| ratio, st, progress);
+    }
+
     let mut out = algorithm.stretch(channels, stretch * ratio, sample_rate, &mut |p| {
         progress(p * stretch_share)
     });
@@ -173,6 +182,31 @@ pub fn process_with_progress(
         for (i, c) in out.iter_mut().enumerate() {
             progress(base + (1.0 - base) * i as f64 / n);
             *c = resample(c, ratio, target_len);
+        }
+    }
+    progress(1.0);
+    out
+}
+
+/// Pisol Direct のピッチ変更（`ratio_at` は入力の位置のピッチ比）。フォルマントを `st` 半音動かすときだけ、そのあと補正する
+pub(crate) fn direct(
+    channels: &[&[f32]],
+    map: &TimeMap,
+    sample_rate: f32,
+    ratio_at: &dyn Fn(f64) -> f64,
+    st: f64,
+    progress: &mut dyn FnMut(f64),
+) -> Vec<Vec<f32>> {
+    let shift = st.abs() > 1e-9;
+    let share = if shift { 0.6 } else { 1.0 };
+    let mut out = psola::shift_map(channels, map, sample_rate, ratio_at, &mut |p| progress(p * share));
+    if shift {
+        // 包絡を 2^(st/12) 倍の位置へ動かす（リサンプルしないので、変形率はその逆数）
+        let warp = 1.0 / 2f64.powf(st / 12.0);
+        let n = out.len().max(1) as f64;
+        for (i, c) in out.iter_mut().enumerate() {
+            let base = share + (1.0 - share) * i as f64 / n;
+            *c = formant::correct(c, warp, sample_rate, &mut |p| progress(base + (1.0 - share) * p / n));
         }
     }
     progress(1.0);

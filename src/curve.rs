@@ -4,7 +4,7 @@
 //! 伸ばし（中間信号の時刻 τ(t) = ∫r dt）、中間信号を位置 τ(t) から読み戻すことで、
 //! 長さは元のまま、時刻 t のピッチだけが r(t) 倍になる。
 
-use crate::{formant, resample_with, Algorithm, Formant, TimeMap};
+use crate::{formant, pipeline, resample_with, Algorithm, Formant, TimeMap};
 
 /// 1フレームで許容するピッチ比の範囲（±24半音）。
 const MIN_RATIO: f32 = 0.25;
@@ -40,6 +40,12 @@ pub fn process(
         let g = (k - k.floor()) as f32;
         (ratios[a] + (ratios[b] - ratios[a]) * g).clamp(MIN_RATIO, MAX_RATIO) as f64
     };
+
+    // Pisol Direct でフォルマントを保つときは、長さはそのままで粒の間隔だけ変える（リサンプルしない）
+    if let (Algorithm::PsolaDirect, Formant::Shift(st)) = (algorithm, formant) {
+        let map = TimeMap::linear(len, len);
+        return pipeline::direct(channels, &map, sample_rate, &ratio_at, st, progress);
+    }
 
     // 中間信号上の位置 τ(i) = Σ r（i は入力サンプル位置）。
     let mut tau = Vec::with_capacity(len + 1);
