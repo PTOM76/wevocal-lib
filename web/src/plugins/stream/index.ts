@@ -2,3 +2,4 @@
 export * from './processorShim'
 export { autoValueAt } from '../autoValue'
 export { clampParam, SMOOTH } from '../../../../plugin-sdk/FxBase'
+export { processorName } from '../../../../plugin-sdk/types'

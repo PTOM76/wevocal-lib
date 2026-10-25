@@ -239,9 +239,14 @@ class WorkletFx extends FxBase {
   }
 }
 
+/** 作ったプラグインのパッケージ（先を走る Worker に processor のソースを渡すため） */
+const packages = new WeakMap<FxPlugin, PluginPackage>()
+/** 外から足したプラグインなら、そのパッケージ（組み込みのものは undefined） */
+export const externalPackage = (plugin: FxPlugin | undefined) => (plugin ? packages.get(plugin) : undefined)
+
 /** パッケージから FX プラグインを作る */
 export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
-  return {
+  const plugin: FxPlugin = {
     manifest: pkg.manifest,
     lang: pkg.manifest.lang ?? {},
     ui: pkg.ui,
@@ -254,4 +259,6 @@ export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
     mountGui: pkg.manifest.format === 'vst' ? (el, values, onChange) => mountVstGui(pkg, el, values, onChange) : undefined,
     create: (ctx, values, host, on = true, state) => new WorkletFx(ctx, pkg, host, state).init(values, on),
   }
+  packages.set(plugin, pkg)
+  return plugin
 }
