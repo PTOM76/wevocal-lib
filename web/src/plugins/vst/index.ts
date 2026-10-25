@@ -120,9 +120,13 @@ class VstProcessor extends AudioWorkletProcessor {
     try {
       const b = __vstBridge()
       const w = b.initSync({ module: this.wasm })
-      const need = s.memory.byteLength - w.memory.buffer.byteLength
-      if (need > 0) w.memory.grow(Math.ceil(need / 65536))
-      new Uint8Array(w.memory.buffer).set(new Uint8Array(s.memory))
+      // 写しには 0 でないページだけがある。作ったばかりの instance で値のある所（最初の大きさの分）は 0 にしてから、ページを置く
+      const fresh = w.memory.buffer.byteLength
+      if (s.size > fresh) w.memory.grow(Math.ceil((s.size - fresh) / 65536))
+      const mem = new Uint8Array(w.memory.buffer)
+      mem.fill(0, 0, fresh)
+      const data = new Uint8Array(s.data)
+      for (let i = 0; i < s.pages.length; i++) mem.set(data.subarray(i * 65536, (i + 1) * 65536), s.pages[i] * 65536)
       const t = w.__wbindgen_externrefs
       if (t.length < s.refs) t.grow(s.refs - t.length)
       const v = b.JsVst.__wrap(s.ptr)
