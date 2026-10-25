@@ -300,16 +300,16 @@ const samplerManifest = base(
     { id: 'root', name: 'param.root', min: 0, max: 127, default: 60, step: 1 },
     { id: 'attack', name: 'param.attack', min: 0, max: 2000, default: 3, step: 1, unit: 'ms' },
     { id: 'release', name: 'param.release', min: 1, max: 5000, default: 120, step: 1, unit: 'ms' },
-    { id: 'loop', name: 'param.loop', min: 0, max: 1, default: 0, choices: ['loop.off', 'loop.on'] },
-    { id: 'formant', name: 'param.formant', min: 0, max: 1, default: 0, choices: ['formant.off', 'formant.on'] },
+    { id: 'loop', name: 'param.loop', min: 0, max: 1, default: 0, toggle: true },
+    { id: 'formant', name: 'param.formant', min: 0, max: 1, default: 0, toggle: true },
     { id: 'volume', name: 'param.volume', min: -48, max: 12, default: 0, step: 0.5, unit: 'dB' },
   ],
   {
-    ja_jp: { name: 'WevSampler', description: '波形ブロックの音を音色にして、音符の高さに合わせて鳴らします', keywords: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'loop.off': 'しない', 'loop.on': 'する', 'param.formant': 'フォルマントを保持', 'formant.off': 'しない', 'formant.on': 'する', 'param.volume': '音量' },
-    en_us: { name: 'WevSampler', description: 'Plays a waveform block\'s sound at the pitch of each note.', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'loop.off': 'Off', 'loop.on': 'On', 'param.formant': 'Keep formant', 'formant.off': 'Off', 'formant.on': 'On', 'param.volume': 'Volume' },
-    ko_kr: { name: 'WevSampler', keywords: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'loop.off': '끄기', 'loop.on': '켜기', 'param.formant': '포먼트 유지', 'formant.off': '끄기', 'formant.on': '켜기', 'param.volume': '음량' },
-    zh_cn: { name: 'WevSampler', keywords: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'loop.off': '关', 'loop.on': '开', 'param.formant': '保留共振峰', 'formant.off': '关', 'formant.on': '开', 'param.volume': '音量' },
-    zh_tw: { name: 'WevSampler', keywords: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'loop.off': '關', 'loop.on': '開', 'param.formant': '保留共振峰', 'formant.off': '關', 'formant.on': '開', 'param.volume': '音量' },
+    ja_jp: { name: 'WevSampler', description: '波形ブロックの音を音色にして、音符の高さに合わせて鳴らします', keywords: 'サンプラー', 'param.root': '元の音の高さ（MIDI ノート）', 'param.attack': 'アタック', 'param.release': 'リリース', 'param.loop': '繰り返し', 'param.formant': 'フォルマントを保持', 'param.volume': '音量' },
+    en_us: { name: 'WevSampler', description: 'Plays a waveform block\'s sound at the pitch of each note.', 'param.root': 'Root note (MIDI)', 'param.attack': 'Attack', 'param.release': 'Release', 'param.loop': 'Loop', 'param.formant': 'Keep formant', 'param.volume': 'Volume' },
+    ko_kr: { name: 'WevSampler', keywords: '샘플러', 'param.root': '원음 높이 (MIDI 노트)', 'param.attack': '어택', 'param.release': '릴리스', 'param.loop': '반복', 'param.formant': '포먼트 유지', 'param.volume': '음량' },
+    zh_cn: { name: 'WevSampler', keywords: '采样器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '释放', 'param.loop': '循环', 'param.formant': '保留共振峰', 'param.volume': '音量' },
+    zh_tw: { name: 'WevSampler', keywords: '取樣器', 'param.root': '原音音高（MIDI 音符）', 'param.attack': '起音', 'param.release': '釋放', 'param.loop': '循環', 'param.formant': '保留共振峰', 'param.volume': '音量' },
   },
 )
 

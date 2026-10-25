@@ -1,5 +1,5 @@
-// プラグインのつまみの自動の画面（params から SliderRow と選択を並べる。WeVocalSynth と WeVocal Studio で共通）
-import { Box, IconButton } from '@mui/material'
+// プラグインのつまみの自動の画面（params から SliderRow、選択、トグルを並べる。WeVocalSynth と WeVocal Studio で共通）
+import { Box, Checkbox, FormControlLabel, IconButton } from '@mui/material'
 import { SliderRow } from 'pevenmui'
 import { fxText } from '../plugins/host'
 import type { FxPlugin } from '../../../plugin-sdk'
@@ -27,6 +27,7 @@ export default function FxParams(p: { plugin: FxPlugin; values: Record<string, n
         const row = (el: React.ReactNode) => (p.automation ? <AutoRow key={d.id} a={p.automation} id={d.id}>{el}</AutoRow> : el)
         const label = fxText(p.plugin, d.name, p.lang)
         const v = p.values[d.id] ?? d.default
+        if (d.toggle) return row(<FormControlLabel key={d.id} label={label} control={<Checkbox size="small" checked={v >= 0.5} onChange={(e) => p.onChange(d.id, e.target.checked ? 1 : 0)} />} />)
         if (d.choices)
           return row(<Choice key={d.id} label={label} value={v} options={d.choices.map((c, i) => [i, fxText(p.plugin, c, p.lang)])} onChange={(x) => p.onChange(d.id, x)} />)
         const k = scale(d.unit)

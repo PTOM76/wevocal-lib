@@ -49,6 +49,7 @@ export function validateManifest(raw: unknown, allowVst = false): PluginManifest
       ...(p.unit ? { unit: p.unit } : {}),
       ...(p.log ? { log: true } : {}),
       ...(Array.isArray(p.choices) ? { choices: p.choices.map(String) } : {}),
+      ...(p.toggle ? { toggle: true } : {}),
     }
   })
   return {

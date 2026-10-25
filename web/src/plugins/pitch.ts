@@ -1,8 +1,11 @@
 // 標準のプラグイン wevocal.pitch（WevPitch。ピッチとフォルマントを、トラックのエフェクトとして、再生中にそのまま変える。processor 方式）
-// 位相ボコーダー（STFT。1024 点、4 倍の重なり）。ピッチは周波数の目盛りを写し替えて変え、フォルマント（声の響きの形）は、
-// ケプストラムで求めたスペクトルの包絡を、励起（包絡で割ったもの）から切り離して動かす。遅れは 768 サンプル。リアルタイム向けの簡易版（高域の細かさは、波形ブロックのピッチの処理方式に劣る）
+// 処理方式は 2 つ。Phasera は位相ボコーダー（STFT。1024 点、4 倍の重なり）。ピッチは周波数の目盛りを写し替えて変え、フォルマント（声の響きの形）は、
+// ケプストラムで求めたスペクトルの包絡を、励起（包絡で割ったもの）から切り離して動かす。遅れは 768 サンプル。
+// Pisol Direct は PSOLA（声の周期を求め、1 周期の粒を間隔を変えて並べ直す）。粒の形を変えないのでフォルマントが自然に残る。単音の声向けで、遅れは 2048 サンプル。
+// どちらもリアルタイム向けの簡易版（高域の細かさは、波形ブロックのピッチの処理方式に劣る）
 import { makeExternalPlugin } from './external'
-import type { PluginManifest } from '../../../plugin-sdk'
+import { PSOLA_LATENCY, PSOLA_PROCESSOR } from './pitchPsola'
+import type { FxPlugin, PluginManifest } from '../../../plugin-sdk'
 
 export const pitchManifest: PluginManifest = {
   id: 'wevocal.pitch',
@@ -16,16 +19,17 @@ export const pitchManifest: PluginManifest = {
   params: [
     { id: 'pitch', name: 'param.pitch', min: -24, max: 24, default: 0, step: 0.01, unit: '' },
     { id: 'formant', name: 'param.formant', min: -12, max: 12, default: 0, step: 0.01, unit: '' },
-    { id: 'keep', name: 'param.keep', min: 0, max: 1, default: 1, choices: ['keep.follow', 'keep.keep'] },
+    { id: 'keep', name: 'param.keep', min: 0, max: 1, default: 1, toggle: true },
+    { id: 'algorithm', name: 'param.algorithm', min: 0, max: 1, default: 0, choices: ['algorithm.pv', 'algorithm.psola'] },
   ],
   tail: 0.05,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは約 16 ミリ秒です', keywords: 'ピッチ フォルマント ピッチシフト', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマント', 'keep.follow': 'ピッチと一緒に動かす', 'keep.keep': '元のまま保つ' },
-    en_us: { name: 'WevPitch', description: 'Changes pitch and formants (vocal tone) live during playback. Latency is about 16 ms.', 'param.pitch': 'Pitch (semitones)', 'param.formant': 'Formant (semitones)', 'param.keep': 'Formant', 'keep.follow': 'Follow the pitch', 'keep.keep': 'Keep the original' },
-    ko_kr: { name: 'WevPitch', keywords: '피치 포먼트', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트', 'keep.follow': '피치와 함께 이동', 'keep.keep': '원래대로 유지' },
-    zh_cn: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '随音高移动', 'keep.keep': '保持原样' },
-    zh_tw: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '共振峰', 'keep.follow': '隨音高移動', 'keep.keep': '保持原樣' },
+    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは Phasera で約 16 ミリ秒、Pisol Direct で約 43 ミリ秒です', keywords: 'ピッチ フォルマント ピッチシフト', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマントを保持', 'param.algorithm': '処理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
+    en_us: { name: 'WevPitch', description: 'Changes pitch and formants (vocal tone) live during playback. Latency is about 16 ms with Phasera and 43 ms with Pisol Direct.', 'param.pitch': 'Pitch (semitones)', 'param.formant': 'Formant (semitones)', 'param.keep': 'Keep formant', 'param.algorithm': 'Algorithm', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
+    ko_kr: { name: 'WevPitch', keywords: '피치 포먼트', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트 유지', 'param.algorithm': '처리 방식', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
+    zh_cn: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '处理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
+    zh_tw: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '處理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
   },
 }
 
@@ -193,17 +197,21 @@ class Channel {
   }
 }
 
+${PSOLA_PROCESSOR}
+
 class PitchProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       { name: 'pitch', defaultValue: 0, minValue: -24, maxValue: 24, automationRate: 'k-rate' },
       { name: 'formant', defaultValue: 0, minValue: -12, maxValue: 12, automationRate: 'k-rate' },
       { name: 'keep', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'algorithm', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ]
   }
   constructor() {
     super()
     this.ch = [new Channel(), new Channel()]
+    this.psola = new Psola(2, sampleRate)
   }
   process(inputs, outputs, p) {
     const input = inputs[0]
@@ -213,11 +221,16 @@ class PitchProcessor extends AudioWorkletProcessor {
     const formant = p.formant[0]
     const keep = p.keep[0] >= 0.5
     const ratio = Math.pow(2, pitch / 12)
-    // 元のまま保つ: 包絡は formant だけ動かす。一緒に動かす: 包絡はピッチと同じだけ動き、さらに formant を足す
+    // 保持する: 包絡は formant だけ動かす。保持しない: 包絡はピッチと同じだけ動き、さらに formant を足す
     const fratio = Math.pow(2, (keep ? formant : pitch + formant) / 12)
     // 包絡を切り離す必要があるのは、包絡の動きがピッチの動きと違うとき
     const useEnv = Math.abs(fratio - ratio) > 1e-4
     const n = input[0].length
+    if (p.algorithm[0] >= 0.5) {
+      // Pisol Direct: 粒の形を変えないので、包絡の倍率は保持なら formant だけ、保持しないならピッチの分も足して粒を縮めて読む
+      for (let i = 0; i < n; i++) this.psola.push(input, output, i, ratio, fratio)
+      return true
+    }
     for (let c = 0; c < output.length; c++) {
       const src = input[c] || input[0]
       const ch = this.ch[Math.min(c, 1)]
@@ -229,4 +242,5 @@ class PitchProcessor extends AudioWorkletProcessor {
 registerProcessor('wevocal-fx-wevocal-pitch', PitchProcessor)
 `
 
-export const pitchPlugin = makeExternalPlugin({ manifest: pitchManifest, processor: PROCESSOR })
+// 遅れは処理方式で変わる（Pisol Direct は長い）
+export const pitchPlugin: FxPlugin = { ...makeExternalPlugin({ manifest: pitchManifest, processor: PROCESSOR }), latency: (v) => ((v.algorithm ?? 0) >= 0.5 ? PSOLA_LATENCY : (pitchManifest.latency ?? 0)) }

@@ -71,9 +71,14 @@ export const chainTail = (slots: FxSlot[] | undefined, bpm = 120) =>
       }),
   )
 
-/** オンのプラグインの遅れの合計（秒）。manifest.latency（サンプル）を足す */
+/** オンのプラグインの遅れの合計（秒）。latency（値で変わるもの）か manifest.latency（サンプル）を足す */
 export const chainLatency = (slots: FxSlot[] | undefined, sampleRate: number) =>
-  (slots ?? []).filter((s) => s.on).reduce((sum, s) => sum + (findPlugin(s.plugin)?.manifest.latency ?? 0), 0) / sampleRate
+  (slots ?? [])
+    .filter((s) => s.on)
+    .reduce((sum, s) => {
+      const p = findPlugin(s.plugin)
+      return sum + (p?.latency ? p.latency(s.values) : (p?.manifest.latency ?? 0))
+    }, 0) / sampleRate
 
 export interface FxChain {
   input: AudioNode
