@@ -44,7 +44,7 @@ pub enum Algorithm {
     Sola3,
     /// 正弦波モデル（SMS、愛称は Specraw）。できるだけ可逆（往復や重ねた加工で劣化しにくい）。和音や楽器にも使える
     Sms,
-    /// PSOLA でリサンプルせずにピッチを変える（Pisol Direct）。フォルマントを保つときは補正を通さない。伸縮だけ、フォルマントを保たないときは PSOLA 2 と同じ
+    /// PSOLA でリサンプルせずにピッチを変える（Vedict）。フォルマントを保つときは補正を通さない。伸縮だけ、フォルマントを保たないときは PSOLA 2 と同じ
     PsolaDirect,
 }
 
@@ -160,7 +160,7 @@ pub fn process_with_progress(
     };
     let n = channels.len().max(1) as f64;
 
-    // Pisol Direct でフォルマントを保つときは、粒の間隔でピッチを変える（リサンプルしない）
+    // Vedict でフォルマントを保つときは、粒の間隔でピッチを変える（リサンプルしない）
     if let (Algorithm::PsolaDirect, Formant::Shift(st), true) = (algorithm, formant, pitch) {
         let map = TimeMap::linear(len, target_len);
         return direct(channels, &map, sample_rate, &|_| ratio, st, progress);
@@ -188,7 +188,7 @@ pub fn process_with_progress(
     out
 }
 
-/// Pisol Direct のピッチ変更（`ratio_at` は入力の位置のピッチ比）。フォルマントを `st` 半音動かすときだけ、そのあと補正する
+/// Vedict のピッチ変更（`ratio_at` は入力の位置のピッチ比）。フォルマントを `st` 半音動かすときだけ、そのあと補正する
 pub(crate) fn direct(
     channels: &[&[f32]],
     map: &TimeMap,

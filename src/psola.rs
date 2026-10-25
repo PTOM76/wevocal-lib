@@ -8,7 +8,7 @@
 //! 息や子音など周期のない部分は一定間隔で切り出し、同じ断片の繰り返しがブザー音にならないよう、
 //! 切り出す位置を少しずつランダムにずらす。
 //!
-//! `shift_map`（Pisol Direct）は、粒を並べる間隔を変えてリサンプルせずにピッチを変える。粒の形は変えないのでフォルマントが動かない。
+//! `shift_map`（Vedict）は、粒を並べる間隔を変えてリサンプルせずにピッチを変える。粒の形は変えないのでフォルマントが動かない。
 
 use crate::{f0, TimeMap};
 use std::f64::consts::PI;
@@ -63,7 +63,7 @@ pub fn stretch_map_with(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, ma
     run(channels, map, sample_rate, marking, None, progress)
 }
 
-/// 伸縮しながら、リサンプルせずにピッチを変える（Pisol Direct）。`ratio_at` は入力の位置（サンプル）のピッチ比。
+/// 伸縮しながら、リサンプルせずにピッチを変える（Vedict）。`ratio_at` は入力の位置（サンプル）のピッチ比。
 /// 声のある所は、1 周期の粒を形を変えずに 周期 ÷ 比 の間隔で並べ直すので、フォルマントは動かない
 pub fn shift_map(channels: &[&[f32]], map: &TimeMap, sample_rate: f32, ratio_at: &dyn Fn(f64) -> f64, progress: &mut dyn FnMut(f64)) -> Vec<Vec<f32>> {
     run(channels, map, sample_rate, Marking::Correlation, Some(ratio_at), progress)

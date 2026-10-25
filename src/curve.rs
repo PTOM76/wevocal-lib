@@ -41,7 +41,7 @@ pub fn process(
         (ratios[a] + (ratios[b] - ratios[a]) * g).clamp(MIN_RATIO, MAX_RATIO) as f64
     };
 
-    // Pisol Direct でフォルマントを保つときは、長さはそのままで粒の間隔だけ変える（リサンプルしない）
+    // Vedict でフォルマントを保つときは、長さはそのままで粒の間隔だけ変える（リサンプルしない）
     if let (Algorithm::PsolaDirect, Formant::Shift(st)) = (algorithm, formant) {
         let map = TimeMap::linear(len, len);
         return pipeline::direct(channels, &map, sample_rate, &ratio_at, st, progress);

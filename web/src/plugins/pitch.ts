@@ -1,7 +1,7 @@
 // 標準のプラグイン wevocal.pitch（WevPitch。ピッチとフォルマントを、トラックのエフェクトとして、再生中にそのまま変える。processor 方式）
 // 処理方式は 2 つ。Phasera は位相ボコーダー（STFT。1024 点、4 倍の重なり）。ピッチは周波数の目盛りを写し替えて変え、フォルマント（声の響きの形）は、
 // ケプストラムで求めたスペクトルの包絡を、励起（包絡で割ったもの）から切り離して動かす。遅れは 768 サンプル。
-// Pisol Direct は PSOLA（声の周期を求め、1 周期の粒を間隔を変えて並べ直す）。粒の形を変えないのでフォルマントが自然に残る。単音の声向けで、遅れは 2048 サンプル。
+// Vedict は PSOLA（声の周期を求め、1 周期の粒を間隔を変えて並べ直す）。粒の形を変えないのでフォルマントが自然に残る。単音の声向けで、遅れは 2048 サンプル。
 // どちらもリアルタイム向けの簡易版（高域の細かさは、波形ブロックのピッチの処理方式に劣る）
 import { makeExternalPlugin } from './external'
 import { PSOLA_LATENCY, PSOLA_PROCESSOR } from './pitchPsola'
@@ -25,11 +25,11 @@ export const pitchManifest: PluginManifest = {
   tail: 0.05,
   processor: 'processor.js',
   lang: {
-    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは Phasera で約 16 ミリ秒、Pisol Direct で約 43 ミリ秒です', keywords: 'ピッチ フォルマント ピッチシフト', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマントを保持', 'param.algorithm': '処理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
-    en_us: { name: 'WevPitch', description: 'Changes pitch and formants (vocal tone) live during playback. Latency is about 16 ms with Phasera and 43 ms with Pisol Direct.', 'param.pitch': 'Pitch (semitones)', 'param.formant': 'Formant (semitones)', 'param.keep': 'Keep formant', 'param.algorithm': 'Algorithm', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
-    ko_kr: { name: 'WevPitch', keywords: '피치 포먼트', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트 유지', 'param.algorithm': '처리 방식', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
-    zh_cn: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '处理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
-    zh_tw: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '處理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Pisol Direct' },
+    ja_jp: { name: 'WevPitch', description: 'ピッチとフォルマント（声の響き）を、再生中にそのまま変えます。遅れは Phasera で約 16 ミリ秒、Vedict で約 43 ミリ秒です', keywords: 'ピッチ フォルマント ピッチシフト', 'param.pitch': 'ピッチ（半音）', 'param.formant': 'フォルマント（半音）', 'param.keep': 'フォルマントを保持', 'param.algorithm': '処理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Vedict' },
+    en_us: { name: 'WevPitch', description: 'Changes pitch and formants (vocal tone) live during playback. Latency is about 16 ms with Phasera and 43 ms with Vedict.', 'param.pitch': 'Pitch (semitones)', 'param.formant': 'Formant (semitones)', 'param.keep': 'Keep formant', 'param.algorithm': 'Algorithm', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Vedict' },
+    ko_kr: { name: 'WevPitch', keywords: '피치 포먼트', 'param.pitch': '피치(반음)', 'param.formant': '포먼트(반음)', 'param.keep': '포먼트 유지', 'param.algorithm': '처리 방식', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Vedict' },
+    zh_cn: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '处理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Vedict' },
+    zh_tw: { name: 'WevPitch', keywords: '音高 共振峰', 'param.pitch': '音高（半音）', 'param.formant': '共振峰（半音）', 'param.keep': '保留共振峰', 'param.algorithm': '處理方式', 'algorithm.pv': 'Phasera', 'algorithm.psola': 'Vedict' },
   },
 }
 
@@ -227,7 +227,7 @@ class PitchProcessor extends AudioWorkletProcessor {
     const useEnv = Math.abs(fratio - ratio) > 1e-4
     const n = input[0].length
     if (p.algorithm[0] >= 0.5) {
-      // Pisol Direct: 粒の形を変えないので、包絡の倍率は保持なら formant だけ、保持しないならピッチの分も足して粒を縮めて読む
+      // Vedict: 粒の形を変えないので、包絡の倍率は保持なら formant だけ、保持しないならピッチの分も足して粒を縮めて読む
       for (let i = 0; i < n; i++) this.psola.push(input, output, i, ratio, fratio)
       return true
     }
@@ -242,5 +242,5 @@ class PitchProcessor extends AudioWorkletProcessor {
 registerProcessor('wevocal-fx-wevocal-pitch', PitchProcessor)
 `
 
-// 遅れは処理方式で変わる（Pisol Direct は長い）
+// 遅れは処理方式で変わる（Vedict は長い）
 export const pitchPlugin: FxPlugin = { ...makeExternalPlugin({ manifest: pitchManifest, processor: PROCESSOR }), latency: (v) => ((v.algorithm ?? 0) >= 0.5 ? PSOLA_LATENCY : (pitchManifest.latency ?? 0)) }

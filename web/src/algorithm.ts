@@ -11,7 +11,7 @@ export const ALGORITHM_NAMES: Record<Algorithm, string> = {
   sola3: 'Vesola',
   sola2: 'Solis',
   psola2: 'Pisol',
-  psolad: 'Pisol Direct',
+  psolad: 'Vedict',
   wsola2: 'Wevia',
   pv2: 'Phasera v2',
   pv: 'Phasera',

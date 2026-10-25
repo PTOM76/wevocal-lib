@@ -1,4 +1,4 @@
-// WevPitch の Pisol Direct（processor の文字列の PSOLA）のテスト。AudioWorklet の外で直接回す
+// WevPitch の Vedict（processor の文字列の PSOLA）のテスト。AudioWorklet の外で直接回す
 import { describe, expect, it } from 'vitest'
 import { PSOLA_LATENCY, PSOLA_PROCESSOR } from './pitchPsola'
 
@@ -63,7 +63,7 @@ const crossings = (x: Float32Array) => {
 
 const mid = (y: Float32Array) => y.subarray(PSOLA_LATENCY + SR * 0.3, PSOLA_LATENCY + SR * 0.8)
 
-describe('Pisol Direct（WevPitch）', () => {
+describe('Vedict（WevPitch）', () => {
   const x = vowel(150, 1.2)
   it('ピッチを上げ下げでき、響き（共振の山）は動かない', () => {
     const base = crossings(mid(x))
