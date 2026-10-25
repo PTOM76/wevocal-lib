@@ -56,6 +56,10 @@ export default function FxChainDialog(p: {
   /** 利用者のプリセット（プラグインの id ごと）。保存はアプリが行う */
   userPresets?: Record<string, Preset<Values>[]>
   onUserPresetsChange?: (plugin: string, list: Preset<Values>[]) => void
+  /** 先頭から何個を変えられなくするか（フリーズで音に含めた FX など。後ろへの追加はできる） */
+  locked?: number
+  /** 変えられない項目に出す説明 */
+  lockedLabel?: string
   onClose: () => void
 }) {
   // 画面の端の欄に置ける（スマホは欄がないので、ダイアログのまま）
@@ -122,9 +126,12 @@ export default function FxChainDialog(p: {
       />
     ) : null
   const name = (pl: FxPlugin) => fxText(pl, 'name', p.lang)
+  const lockedN = Math.min(p.locked ?? 0, p.slots.length)
+  const isLocked = (i: number) => i < lockedN
 
-  const patch = (i: number, s: Partial<FxSlot>, merge?: string) => p.onChange(p.slots.map((x, j) => (j === i ? { ...x, ...s } : x)), merge)
+  const patch = (i: number, s: Partial<FxSlot>, merge?: string) => !isLocked(i) && p.onChange(p.slots.map((x, j) => (j === i ? { ...x, ...s } : x)), merge)
   const move = (i: number, d: number) => {
+    if (isLocked(i) || isLocked(i + d)) return
     const list = [...p.slots]
     ;[list[i], list[i + d]] = [list[i + d], list[i]]
     p.onChange(list)
@@ -132,7 +139,7 @@ export default function FxChainDialog(p: {
   }
   /** i の項目を j の位置へ動かす（ドラッグ） */
   const moveTo = (i: number, j: number) => {
-    if (i === j || i + 1 === j) return
+    if (i === j || i + 1 === j || isLocked(i) || j < lockedN) return
     const list = [...p.slots]
     const [it] = list.splice(i, 1)
     list.splice(j > i ? j - 1 : j, 0, it)
@@ -145,11 +152,14 @@ export default function FxChainDialog(p: {
     setAdding(false)
   }
   const remove = (i: number) => {
+    if (isLocked(i)) return
     p.onChange(p.slots.filter((_, j) => j !== i))
     setSel(Math.max(0, i - 1))
   }
   /** s を i の位置に入れる（貼り付けと複製） */
-  const insert = (i: number, s: FxSlot) => {
+  const insert = (at: number, s: FxSlot) => {
+    // 変えられない項目より前には入れない
+    const i = Math.max(at, lockedN)
     p.onChange([...p.slots.slice(0, i), structuredClone(s), ...p.slots.slice(i)])
     setSel(i)
   }
@@ -213,7 +223,7 @@ export default function FxChainDialog(p: {
                     setSel(i)
                     setMenu({ x: e.clientX, y: e.clientY, i })
                   }}
-                  draggable
+                  draggable={!isLocked(i)}
                   onDragStart={(e) => {
                     e.dataTransfer.effectAllowed = 'move'
                     dragRef.current = i
@@ -245,14 +255,14 @@ export default function FxChainDialog(p: {
                     gap: 0.5,
                     px: 0.5,
                     borderRadius: 0.5,
-                    cursor: 'grab',
+                    cursor: isLocked(i) ? 'default' : 'grab',
                     bgcolor: i === index ? 'action.selected' : undefined,
                     opacity: dragFrom === i ? 0.4 : s.on ? 1 : 0.55,
                     // 落とす位置に線を出す
                     boxShadow: dragFrom !== null && dragOver === i ? (t2) => `0 -2px 0 ${t2.palette.primary.main}` : dragFrom !== null && dragOver === i + 1 && i === p.slots.length - 1 ? (t2) => `0 2px 0 ${t2.palette.primary.main}` : undefined,
                   }}
                 >
-                  <Switch size="small" checked={s.on} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { on: e.target.checked })} slotProps={{ input: { 'aria-label': t('fx.on') } }} />
+                  <Switch size="small" checked={s.on} disabled={isLocked(i)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { on: e.target.checked })} slotProps={{ input: { 'aria-label': t('fx.on') } }} />
                   <Tooltip title={pl ? fxDescription(pl, p.lang) : ''} placement="top" enterDelay={500}>
                     <Typography noWrap sx={{ flex: 1, fontSize: pevenFont('base') }}>
                       {pl ? name(pl) : s.plugin}
@@ -272,14 +282,14 @@ export default function FxChainDialog(p: {
                   )}
                   {/* ドラッグが使えない画面（タッチ）では、矢印で動かす */}
                   <Box sx={{ display: 'none', '@media (pointer: coarse)': { display: 'flex' } }}>
-                    <IconButton size="small" sx={round} aria-label={t('fx.up')} disabled={i === 0} onClick={(e) => stop(e, () => move(i, -1))}>
+                    <IconButton size="small" sx={round} aria-label={t('fx.up')} disabled={i <= lockedN} onClick={(e) => stop(e, () => move(i, -1))}>
                       ↑
                     </IconButton>
-                    <IconButton size="small" sx={round} aria-label={t('fx.down')} disabled={i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
+                    <IconButton size="small" sx={round} aria-label={t('fx.down')} disabled={isLocked(i) || i === p.slots.length - 1} onClick={(e) => stop(e, () => move(i, 1))}>
                       ↓
                     </IconButton>
                   </Box>
-                  <IconButton size="small" sx={round} aria-label={t('fx.remove')} onClick={(e) => stop(e, () => remove(i))}>
+                  <IconButton size="small" sx={round} aria-label={t('fx.remove')} disabled={isLocked(i)} onClick={(e) => stop(e, () => remove(i))}>
                     ×
                   </IconButton>
                 </Box>
@@ -294,13 +304,13 @@ export default function FxChainDialog(p: {
               entries={
                 menu?.i != null
                   ? [
-                      { label: t('fx.on'), checked: p.slots[menu.i]?.on, onClick: () => patch(menu.i!, { on: !p.slots[menu.i!].on }) },
+                      { label: t('fx.on'), checked: p.slots[menu.i]?.on, disabled: isLocked(menu.i), onClick: () => patch(menu.i!, { on: !p.slots[menu.i!].on }) },
                       { divider: true },
                       { label: t('fx.copy'), shortcut: `${mod}C`, onClick: () => copy(menu.i!) },
                       { label: t('fx.paste'), shortcut: `${mod}V`, disabled: !copied, onClick: paste },
                       { label: t('fx.duplicate'), shortcut: `${mod}D`, onClick: () => insert(menu.i! + 1, p.slots[menu.i!]) },
                       { divider: true },
-                      { label: t('fx.remove'), shortcut: 'Delete', onClick: () => remove(menu.i!) },
+                      { label: t('fx.remove'), shortcut: 'Delete', disabled: isLocked(menu.i), onClick: () => remove(menu.i!) },
                     ]
                   : [
                       { label: t('fx.add'), onClick: () => setAdding(true) },
@@ -310,6 +320,9 @@ export default function FxChainDialog(p: {
             />
           </Box>
           <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
+            {!adding && slot && isLocked(index) && p.lockedLabel && <Typography sx={{ mb: 1, fontSize: pevenFont('sm'), color: 'text.secondary' }}>{p.lockedLabel}</Typography>}
+            {/* 変えられない項目は、つまみを触れないようにして薄く出す（値の変更は patch でも止める） */}
+            <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, minHeight: 0, ...(!adding && isLocked(index) ? { pointerEvents: 'none', opacity: 0.6 } : {}) }}>
             {adding && <FxAddPicker plugins={plugins} lang={p.lang} onPick={add} onCancel={() => setAdding(false)} labels={{ search: t('fx.search'), none: t('fx.noMatch'), cancel: t('fx.addCancel') }} />}
             {!adding && slot && !plugin && <Typography sx={{ fontSize: pevenFont('base'), color: 'text.secondary' }}>{t('fx.missing', { id: slot.plugin })}</Typography>}
             {!adding && slot && plugin && plugin.manifest.id === EQ_ID && (
@@ -398,6 +411,7 @@ export default function FxChainDialog(p: {
                 )}
               </>
             )}
+            </Box>
           </Box>
         </Box>
       </DialogContent>
