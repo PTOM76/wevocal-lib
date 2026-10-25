@@ -2,6 +2,7 @@
 import { FxBase, SMOOTH } from '../../../plugin-sdk/FxBase'
 import { addLoadGuard, autoBypassEnabled, clearLoad, countProcessor, loadOf, reportLoad, setOverloaded } from './registry'
 import { mountVstGui } from './vst/gui'
+import { readySnapshot, vstSnapshot } from './vst/snapshot'
 import { processorName, type FxPlugin, type HostInfo, type PluginManifest } from '../../../plugin-sdk'
 
 /** 導入したプラグインの中身（マニフェストと、processor のソース、wasm） */
@@ -145,7 +146,8 @@ class WorkletFx extends FxBase {
       numberOfOutputs: 1,
       outputChannelCount: [2],
       // offline: 書き出しや先に作る描画（OfflineAudioContext）か。VST はそのとき読み込みを少しずつにせず、最初に済ませる（途中が素通しにならないように）
-      processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, sampleRate: this.ctx.sampleRate, state: this.state, offline: !(this.ctx instanceof AudioContext) },
+      // snap: VST の読み込みの済んだ写し（できていれば。DLL を読み込み直さずに戻す）
+      processorOptions: { wasm: this.pkg.wasm, dll: this.pkg.dll, snap: this.pkg.manifest.format === 'vst' ? readySnapshot(this.pkg) : null, sampleRate: this.ctx.sampleRate, state: this.state, offline: !(this.ctx instanceof AudioContext) },
     })
     this.node = node
     if (this.ctx instanceof AudioContext) {
@@ -243,7 +245,11 @@ export function makeExternalPlugin(pkg: PluginPackage): FxPlugin {
     manifest: pkg.manifest,
     lang: pkg.manifest.lang ?? {},
     ui: pkg.ui,
-    preload: async (ctx) => void (await loadModule(ctx, pkg)),
+    // VST は読み込みの済んだ写しも作る。書き出しや先に作る描画（offline）は、できるまで待つ（待たないと、描画のたびに DLL を読み込む）
+    preload: async (ctx) => {
+      const snap = pkg.manifest.format === 'vst' ? vstSnapshot(pkg) : null
+      await Promise.all([loadModule(ctx, pkg), ctx instanceof AudioContext ? null : snap])
+    },
     // VST は DLL 自身の画面を出す（画面が無ければ null で、自動の画面になる）
     mountGui: pkg.manifest.format === 'vst' ? (el, values, onChange) => mountVstGui(pkg, el, values, onChange) : undefined,
     create: (ctx, values, host, on = true, state) => new WorkletFx(ctx, pkg, host, state).init(values, on),

@@ -18,6 +18,13 @@ export class JsVst {
         wasm.__wbg_jsvst_free(ptr, 0);
     }
     /**
+     * wasm のメモリの写しから戻したあとに呼ぶ。変換した関数（JIT）は元の wasm の関数の表にあり、戻した先には無いので捨てる（使うとまた変換する）。
+     * 写しは、読み込みの済んだ JsVst があるメモリを、JS から何も呼んでいない間にまるごと写したもの（同じ wasm に限る）
+     */
+    afterRestore() {
+        wasm.jsvst_afterRestore(this.__wbg_ptr);
+    }
+    /**
      * jitMisses のために数え始める（調査用。数えると遅くなる）
      */
     countJitMisses() {

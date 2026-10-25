@@ -5,6 +5,11 @@ export class JsVst {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * wasm のメモリの写しから戻したあとに呼ぶ。変換した関数（JIT）は元の wasm の関数の表にあり、戻した先には無いので捨てる（使うとまた変換する）。
+     * 写しは、読み込みの済んだ JsVst があるメモリを、JS から何も呼んでいない間にまるごと写したもの（同じ wasm に限る）
+     */
+    afterRestore(): void;
+    /**
      * jitMisses のために数え始める（調査用。数えると遅くなる）
      */
     countJitMisses(): void;
@@ -118,6 +123,7 @@ export interface InitOutput {
     readonly __wbg_jsvst_free: (a: number, b: number) => void;
     readonly __wbg_jsvstloader_free: (a: number, b: number) => void;
     readonly jitSelftest: (a: number) => [number, number, number];
+    readonly jsvst_afterRestore: (a: number) => void;
     readonly jsvst_countJitMisses: (a: number) => void;
     readonly jsvst_editorChanges: (a: number) => [number, number];
     readonly jsvst_editorClose: (a: number) => [number, number];

@@ -21,6 +21,7 @@ async function sha(bytes: ArrayBuffer): Promise<string> {
  * 読み込み（DllMain、VSTPluginMain など）は重い（大きい DLL で数秒）ので、再生では JsVstLoader で 1 回の process ごとに約 1 ms ずつ進め、終わるまでは素通しにする
  * （音を出すスレッドを長く止めない）。書き出しや先に作る描画（offline）では、途中が素通しにならないよう最初の process で読み込みを済ませる。
  * どちらも constructor では読み込まない（Chrome は processor ができるまで画面のスレッドを待たせるので、画面が固まる）。
+ * 読み込みの済んだ写し（processorOptions.snap、snapshot.ts）があれば、読み込まずに、別の wasm の instance を作ってメモリごと戻す（数十 ms）。
  * 外した processor の VST は置き場に戻し、同じ AudioContext で次に作る processor が使い回す
  */
 function makeProcessor(id: string, ids: string[], defaults: number[]): string {
@@ -49,7 +50,10 @@ class VstProcessor extends AudioWorkletProcessor {
       initSync({ module: o.wasm })
       this.vst = pool.pop() || null
       // 読み込みは process の中で進める（ここで済ませると、Chrome は processor ができるまで画面のスレッドを待たせる）
-      if (!this.vst) this.loader = new JsVstLoader(new Uint8Array(o.dll))
+      this.snap = this.vst ? null : o.snap || null
+      this.wasm = o.wasm
+      if (!this.vst && !this.snap) this.loader = new JsVstLoader(new Uint8Array(o.dll))
+      this.dll = o.dll
       this.offline = !!o.offline
     } catch (e) {
       this.failed = true
@@ -71,6 +75,7 @@ class VstProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const out = outputs[0]
     const inp = inputs[0]
+    if (this.snap && !this.failed) this.restore()
     if (this.loader && !this.failed) this.stepLoad(this.offline)
     if (this.failed || !this.vst) {
       for (let c = 0; c < out.length; c++) if (inp[c]) out[c].set(inp[c])
@@ -107,6 +112,26 @@ class VstProcessor extends AudioWorkletProcessor {
     }
     for (let c = 0; c < out.length; c++) out[c].set(res[c] ?? res[0])
     return true
+  }
+  /** 写しから戻す。戻せなければ、今までどおり DLL を読み込む */
+  restore() {
+    const s = this.snap
+    this.snap = null
+    try {
+      const b = __vstBridge()
+      const w = b.initSync({ module: this.wasm })
+      const need = s.memory.byteLength - w.memory.buffer.byteLength
+      if (need > 0) w.memory.grow(Math.ceil(need / 65536))
+      new Uint8Array(w.memory.buffer).set(new Uint8Array(s.memory))
+      const t = w.__wbindgen_externrefs
+      if (t.length < s.refs) t.grow(s.refs - t.length)
+      const v = b.JsVst.__wrap(s.ptr)
+      v.afterRestore()
+      this.vst = v
+    } catch (e) {
+      this.port.postMessage({ __wevocalError: 'restore: ' + String(e) })
+      this.loader = new JsVstLoader(new Uint8Array(this.dll))
+    }
   }
   /** 読み込みを少し進める。終わったら JsVst にする */
   stepLoad(all) {
