@@ -1,3 +1,4 @@
+// AIFF / AIFF-C の読み込み（Chrome・Firefox の decodeAudioData が読めないため自前で読む）
 import type { Clip } from './types'
 
 // AIFF / AIFF-C の読み込み。Chrome・Firefox の decodeAudioData は AIFF を読めないので自前で読む。

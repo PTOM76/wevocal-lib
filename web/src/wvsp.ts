@@ -1,3 +1,4 @@
+// WeVocalSynth のプロジェクトファイル（.wvsp）の読み書き
 import type { Clip } from './types'
 
 /**

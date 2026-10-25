@@ -1,3 +1,4 @@
+// 音声ファイルのデコード（WAV・MP4 はヘッダーのサンプルレートのまま読む）。AIFF は aiff.ts
 import type { Clip } from './types'
 import { decodeAiff, isAiff } from './aiff'
 

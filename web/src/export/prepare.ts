@@ -1,3 +1,4 @@
+// 書き出す前の下ごしらえ（範囲の切り出し、モノラル化、サンプルレートの変換）
 import type { Clip, Range } from '../types'
 
 /**

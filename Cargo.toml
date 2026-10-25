@@ -2,7 +2,7 @@
 name = "wevocal-lib"
 version = "0.1.0"
 edition = "2021"
-description = "WeVocalSynth と WeVocalExtractor で共有する信号処理の部品"
+description = "WeVocalSynth、WeVocal Studio、WeVocalExtractor などで共有する信号処理の部品"
 license = "MIT"
 
 [lib]

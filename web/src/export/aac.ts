@@ -1,3 +1,4 @@
+// AAC（M4A）のエンコード（WebCodecs。対応するブラウザのみ）
 import type { Clip } from '../types'
 import { AAC_CODEC } from './formats'
 import { AAC_FRAME, audioSpecificConfig, muxM4a } from './mp4'

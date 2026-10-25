@@ -1,3 +1,4 @@
+// VST を読み込んで wasm のメモリの写しを作る（Worker）
 /// <reference lib="webworker" />
 // VST を Worker の中で読み込み、wasm のメモリごと写して返す（snapshot.ts）。読み込みは重い（大きい DLL で十数秒）ので、画面と音のスレッドから外す
 import { initSync, JsVst } from './vstbridge.js'

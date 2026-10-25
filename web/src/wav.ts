@@ -1,3 +1,4 @@
+// WAV の書き出し（16bit、24bit、32bit float）
 import type { Clip } from './types'
 
 export type WavFormat = 'pcm16' | 'pcm24' | 'float32'

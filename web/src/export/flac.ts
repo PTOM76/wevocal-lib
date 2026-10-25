@@ -1,3 +1,4 @@
+// FLAC のエンコード（ロスレス。エンコーダーは自前で、Worker で動かす）
 import type { Clip } from '../types'
 import type { FlacMessage, FlacRequest } from './flacWorker'
 

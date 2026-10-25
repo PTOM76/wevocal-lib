@@ -1,3 +1,4 @@
+// 書き出しの入口。形式（WAV、FLAC、MP3、Opus、AAC）ごとのエンコーダーを呼ぶ
 import type { Clip, Range } from '../types'
 import { encodeWav, type WavFormat } from '../wav'
 import { prepareClip } from './prepare'

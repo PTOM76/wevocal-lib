@@ -1,3 +1,4 @@
+// MP3 のエンコーダー（Worker。lamejs）
 /// <reference lib="webworker" />
 import { Mp3Encoder } from '@breezystack/lamejs'
 

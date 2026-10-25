@@ -1,3 +1,4 @@
+// FLAC のエンコーダー（Worker）
 /// <reference lib="webworker" />
 import { BitWriter } from './bits'
 

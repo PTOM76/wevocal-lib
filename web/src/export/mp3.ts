@@ -1,3 +1,4 @@
+// MP3 のエンコード（lamejs を Worker で使い、書き出すときだけ読み込む）
 import type { Clip } from '../types'
 import { toInt16 } from './prepare'
 import type { Mp3Message, Mp3Request } from './mp3Worker'

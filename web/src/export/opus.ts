@@ -1,3 +1,4 @@
+// Opus のエンコード（WebCodecs。Ogg に包んで書き出す）
 import type { Clip } from '../types'
 import { OggWriter, opusHead, opusTags } from './ogg'
 import { OPUS_SAMPLE_RATE } from './formats'
