@@ -7,7 +7,8 @@
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
-    "./react": "./src/react/index.ts"
+    "./react": "./src/react/index.ts",
+    "./stream": "./src/plugins/stream/index.ts"
   },
   "peerDependencies": {
     "@breezystack/lamejs": "^1.2.7",
