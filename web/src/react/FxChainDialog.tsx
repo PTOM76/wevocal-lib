@@ -1,5 +1,7 @@
 // FX の列のダイアログ（WeVocalSynth と WeVocal Studio で共通）。左に列（オンオフ、並び替え、削除）、右に選んだエフェクトの画面。訳文はアプリの t を渡す
 import { useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAngleLeft, faAngleRight } from '@fortawesome/free-solid-svg-icons'
 import { Box, Button, DialogActions, DialogContent, IconButton, Switch, Tooltip, Typography } from '@mui/material'
 import { ContextMenu, PresetMenu, WindowDialog, pevenFont, useMobileLayout, usePanelWidth, type Preset } from 'pevenmui'
 import type { FxPlugin, FxSlot } from '../../../plugin-sdk'
@@ -18,7 +20,7 @@ import PluginGui from './PluginGui'
 /** このダイアログが使う訳文のキー（EQ の画面のキーも使う） */
 export type FxChainDialogKey =
   | EqDialogKey
-  | 'fx.title' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.copy' | 'fx.paste' | 'fx.duplicate' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
+  | 'fx.title' | 'fx.listFold' | 'fx.listUnfold' | 'fx.add' | 'fx.empty' | 'fx.remove' | 'fx.copy' | 'fx.paste' | 'fx.duplicate' | 'fx.up' | 'fx.down' | 'fx.missing' | 'fx.on'
   | 'fx.applyHelp' | 'fx.load' | 'fx.overloaded' | 'fx.search' | 'fx.noMatch' | 'fx.addCancel' | 'fx.autoLane' | 'fx.sidechainSource' | 'fx.sidechainSelf' | 'fx.offlineOnly' | 'fx.offlineOnlyHelp' | 'fx.overloadedHelp' | 'fx.preset' | 'fx.presetEmpty' | 'fx.presetSave' | 'fx.presetRemove' | 'fx.presetName' | 'fx.presetExport' | 'fx.presetImport' | 'fx.presetImportError' | 'fx.guiNative' | 'fx.guiStandard' | 'fx.guiZoomAuto' | 'fx.guiZoomIn' | 'fx.guiZoomOut'
 
 type Values = Record<string, number>
@@ -67,6 +69,22 @@ export default function FxChainDialog(p: {
   const t = p.t
   // 一覧の幅（右の端の分割バーで変えられ、次回も引き継ぐ）
   const listPane = usePanelWidth('wevocal.fxListWidth', 240, 180, 480, 'left')
+  // 一覧を畳む（広い画面だけ。次回も引き継ぐ）
+  const [folded, setFolded] = useState(() => {
+    try {
+      return localStorage.getItem('wevocal.fxListFolded') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleFold = () => {
+    setFolded(!folded)
+    try {
+      localStorage.setItem('wevocal.fxListFolded', folded ? '0' : '1')
+    } catch {
+      // 保存できなくても畳むだけは動く
+    }
+  }
   // 導入したプラグインが増減したら描き直す
   useSyncExternalStore(subscribePlugins, pluginsVersion)
   // 導入したプラグインの負荷と、重くて素通しにしたもの
@@ -206,7 +224,7 @@ export default function FxChainDialog(p: {
               e.preventDefault()
               setMenu({ x: e.clientX, y: e.clientY, i: null })
             }}
-            sx={{ width: { xs: '100%', sm: listPane.width }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0.5, outline: 'none', position: 'relative' }}
+            sx={{ width: { xs: '100%', sm: listPane.width }, flexShrink: 0, display: { xs: 'flex', sm: folded ? 'none' : 'flex' }, flexDirection: 'column', gap: 0.5, outline: 'none', position: 'relative' }}
           >
             {/* 縦に並べる狭い画面では出さない */}
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{listPane.bar}</Box>
@@ -319,6 +337,12 @@ export default function FxChainDialog(p: {
               }
             />
           </Box>
+          {/* 一覧を畳む、開く（広い画面だけ） */}
+          <Tooltip title={t(folded ? 'fx.listUnfold' : 'fx.listFold')}>
+            <IconButton size="small" aria-label={t(folded ? 'fx.listUnfold' : 'fx.listFold')} onClick={toggleFold} sx={{ display: { xs: 'none', sm: 'inline-flex' }, alignSelf: 'flex-start', ml: -1.5, mr: -1, width: 20, height: 28, borderRadius: 1 }}>
+              <FontAwesomeIcon icon={folded ? faAngleRight : faAngleLeft} size="sm" />
+            </IconButton>
+          </Tooltip>
           <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
             {!adding && slot && isLocked(index) && p.lockedLabel && <Typography sx={{ mb: 1, fontSize: pevenFont('sm'), color: 'text.secondary' }}>{p.lockedLabel}</Typography>}
             {/* 変えられない項目は、つまみを触れないようにして薄く出す（値の変更は patch でも止める） */}
