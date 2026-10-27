@@ -170,6 +170,8 @@ class WorkletFx extends FxBase {
 
   protected attached(on: boolean) {
     this.node?.port.postMessage({ __wevocalPause: !on })
+    // オンに戻すときは、止まって素通しになっていた VST に読み込み直させる（VST の processor だけが受ける）
+    if (on) this.node?.port.postMessage({ __wevocalRetry: true })
     // 止めている間は測らないので、前の値を消す
     if (!on) {
       this.lastLoad = undefined

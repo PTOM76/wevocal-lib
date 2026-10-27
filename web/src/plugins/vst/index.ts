@@ -62,6 +62,21 @@ class VstProcessor extends AudioWorkletProcessor {
     }
     // 外されたら、止まっていない VST を置き場に戻す（つまみは次の process で全部渡し直す）
     this.port.addEventListener('message', (e) => {
+      // オフからオンに戻されたとき、止まっていれば（素通しになっていれば）DLL を読み込み直して試す
+      if (e.data && e.data.__wevocalRetry && this.failed && this.dll) {
+        this.failed = false
+        this.vst = null
+        this.snap = null
+        this.rs = null
+        this.last.fill(NaN)
+        try {
+          this.loader = new JsVstLoader(new Uint8Array(this.dll))
+        } catch (err) {
+          this.failed = true
+          this.port.postMessage({ __wevocalError: String(err) })
+        }
+        return
+      }
       if (!e.data || !e.data.__wevocalDispose) return
       if (this.loader) {
         this.loader.free()
